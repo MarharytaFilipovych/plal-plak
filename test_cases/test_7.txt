@@ -1,0 +1,5 @@
+var negative
+var positive
+negative = -15
+positive = negative + 20
+return positive

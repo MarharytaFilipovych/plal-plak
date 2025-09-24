@@ -1,0 +1,5 @@
+var value
+value = 100
+value = value - 25
+value = value - 15
+return value
