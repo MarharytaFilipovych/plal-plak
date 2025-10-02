@@ -2,6 +2,7 @@
 import os.path
 import sys
 import argparse
+import re
 
 
 class Compiler:
@@ -54,30 +55,41 @@ define void @printResult(i32 %val) {
             raise ValueError(f"The variable {variable} was not declared!")
 
         expression = expression.strip()
-        if (expression.isdigit() or (expression.lstrip("-").isdigit())
-                or self.declared_variables.get(expression)):
-            if expression == variable:
-                raise ValueError("Self-assignment is not allowed!")
+        
+        if (expression.isdigit() or (expression.lstrip("-").isdigit())):
             self.declared_variables[variable] = True
             return f"  %{variable} = add i32 0, {expression}"
-        return f"  %{variable} = {self.__parse_expression(variable, expression)}"
+        elif expression in self.declared_variables:
+            if not self.declared_variables[expression]:
+                raise ValueError(f"Variable {expression} is not initialized!")
+            if expression == variable:
+                raise ValueError("Self-assignment is not allowed here!")
+            self.declared_variables[variable] = True
+            return f"  %{variable} = add i32 0, %{expression}"  
+        else:
+            return f"  %{variable} = {self.__parse_expression(variable, expression)}"
 
     def __parse_expression(self, variable, expression: str) -> str:
-        expression_parts = expression.split()
-        if len(expression_parts) != 3:
+        pattern = r'(?<=[a-zA-Z0-9])\s*([+\-*])\s*'
+        parts = re.split(pattern, expression)
+        
+        parts = [p.strip() for p in parts if p.strip()]
+        
+        if len(parts) != 3:
             raise ValueError("Your expression must be simple, only 2 operands are allowed!")
 
-        operand_1, operation, operand_2 = expression_parts
+        operand_1, operation, operand_2 = parts
         operation = operation.strip()
         operand_1 = operand_1.strip()
         operand_2 = operand_2.strip()
 
-        if operand_1 == variable or operand_2 == variable:
-            raise ValueError("Self-assignment is not allowed!")
+        if not self.declared_variables[variable]:
+            if operand_1 == variable or operand_2 == variable:
+                raise ValueError("Self-assignment is not allowed in case of the first initialisation!")
 
         if operation not in Compiler.llvm_ir_operands:
             raise ValueError(
-                f"Operation {operation} is not allowed. Allowed: {', '.join( Compiler.llvm_ir_operands.keys())}")
+                f"Operation {operation} is not allowed. Allowed: {', '.join(Compiler.llvm_ir_operands.keys())}")
 
         operand_1 = self.__resolve_operand(operand_1)
         operand_2 = self.__resolve_operand(operand_2)
@@ -134,13 +146,13 @@ define void @printResult(i32 %val) {
 
 
 def get_input_file() -> str:
-    this_filename = os.path.basename( __file__ )
+    this_filename = os.path.basename(__file__)
     parser = argparse.ArgumentParser()
     parser.add_argument('input_file', help="Input file that contains code with a txt extension")
     args = parser.parse_args()
     input_file = args.input_file
 
-    if not os.path.exists( input_file ):
+    if not os.path.exists(input_file):
         print(f"File '{input_file}' was not found! Usage: python {this_filename} <input_file>")
         sys.exit(1)
 
@@ -151,7 +163,6 @@ def run_program():
     compiler = Compiler()
     input_file = get_input_file()
 
-  
     try:
         converted_code = compiler.parse_input_file(input_file)
         output_file = os.path.splitext(input_file)[0] + ".ll"
