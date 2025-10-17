@@ -1,0 +1,9 @@
+Resources used:
+* https://www.geeksforgeeks.org/python/hierarchical-inheritance-with-examples-in-python/
+* https://www.geeksforgeeks.org/python/abstract-classes-in-python/
+* https://www.geeksforgeeks.org/python/python-isinstance-method/
+
+Link to ai chat:
+* https://claude.ai/share/b002619d-86c5-4a90-b93c-2e799ad40e55
+* https://claude.ai/share/7ea617f7-667e-4d13-a772-c6a49d806224
+* https://claude.ai/share/929d2713-b437-4ad5-bfd8-15677c0cd93c
