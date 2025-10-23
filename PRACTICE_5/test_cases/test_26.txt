@@ -1,0 +1,7 @@
+bool flag{false}
+i32 mut result{0}
+if !flag
+{
+    result = 42
+}
+return result

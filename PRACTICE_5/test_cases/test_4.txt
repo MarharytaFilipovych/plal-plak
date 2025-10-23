@@ -1,0 +1,5 @@
+i32 a{100}
+i32 b{50}
+i32 mut result{a - b}
+result = result * 2
+return result
