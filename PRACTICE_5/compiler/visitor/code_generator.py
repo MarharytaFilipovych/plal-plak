@@ -53,13 +53,13 @@ define void @printResult(i32 %val) {
     def visit_declaration(self, node): 
         llvm_type = node.data_type.to_llvm()
         value = node.expr_node.accept(self)
-        reg = self._get_variable_register(node.variable)
+        reg = self.__get_variable_register(node.variable)
 
         self.variable_types[node.variable] = node.data_type
 
-        expr_type = self._get_node_type(node.expr_node)
+        expr_type = self.__get_node_type(node.expr_node)
         if expr_type == DataType.I32 and node.data_type == DataType.I64:
-            temp_reg = self._get_temp_register()
+            temp_reg = self.__get_temp_register()
             self.translated_lines.append(f"  {temp_reg} = sext i32 {value} to i64")
             value = temp_reg
 
@@ -69,10 +69,10 @@ define void @printResult(i32 %val) {
         var_type = self.variable_types[node.variable]
         llvm_type = var_type.to_llvm()
         value = node.expr_node.accept(self)
-        reg = self._get_variable_register(node.variable)
-        expr_type = self._get_node_type(node.expr_node)
+        reg = self.__get_variable_register(node.variable)
+        expr_type = self.__get_node_type(node.expr_node)
         if expr_type == DataType.I32 and var_type == DataType.I64:
-            temp_reg = self._get_temp_register()
+            temp_reg = self.__get_temp_register()
             self.translated_lines.append(f"  {temp_reg} = sext i32 {value} to i64")
             value = temp_reg
 
@@ -80,13 +80,13 @@ define void @printResult(i32 %val) {
 
     def visit_return(self, node):
         value = node.expr_node.accept(self)
-        return_type = self._get_node_type(node.expr_node)
+        return_type = self.__get_node_type(node.expr_node)
         if return_type == DataType.BOOL:
-            cast_reg = self._get_temp_register()
+            cast_reg = self.__get_temp_register()
             self.translated_lines.append(f"  {cast_reg} = zext i1 {value} to i32")
             value = cast_reg
         elif return_type == DataType.I64:
-            cast_reg = self._get_temp_register()
+            cast_reg = self.__get_temp_register()
             self.translated_lines.append(f"  {cast_reg} = trunc i64 {value} to i32")
             value = cast_reg
 
@@ -97,49 +97,49 @@ define void @printResult(i32 %val) {
         left_value = node.left.accept(self)
         right_value = node.right.accept(self)
         
-        left_type = self._get_node_type(node.left)
-        right_type = self._get_node_type(node.right)
+        left_type = self.__get_node_type(node.left)
+        right_type = self.__get_node_type(node.right)
         
-        temp_reg = self._get_temp_register()
+        temp_reg = self.__get_temp_register()
 
         if node.operator.is_for_comparison():
-            self._generate_comparison(node, left_value, right_value, left_type, right_type, temp_reg)
+            self.__generate_comparison(node, left_value, right_value, left_type, right_type, temp_reg)
         else:
-            self._generate_arithmetic(node, left_value, right_value, left_type, right_type, temp_reg)
+            self.__generate_arithmetic(node, left_value, right_value, left_type, right_type, temp_reg)
 
         return temp_reg
 
-    def _generate_comparison(self, node, left_value, right_value, left_type, right_type, temp_reg):
-        operand_type = self._infer_operand_type(node.left, node.right)
+    def __generate_comparison(self, node, left_value, right_value, left_type, right_type, temp_reg):
+        operand_type = self.__infer_operand_type(node.left, node.right)
         
-        left_value = self._widen_if_needed(left_value, left_type, operand_type)
-        right_value = self._widen_if_needed(right_value, right_type, operand_type)
+        left_value = self.__widen_if_needed(left_value, left_type, operand_type)
+        right_value = self.__widen_if_needed(right_value, right_type, operand_type)
         
         llvm_op = node.operator.to_llvm()
         self.translated_lines.append(
             f"  {temp_reg} = {llvm_op} {operand_type} {left_value}, {right_value}")
 
-    def _generate_arithmetic(self, node, left_value, right_value, left_type, right_type, temp_reg):
+    def __generate_arithmetic(self, node, left_value, right_value, left_type, right_type, temp_reg):
         result_type = node.result_type if node.result_type else DataType.I32
         llvm_type = result_type.to_llvm()
         
         if result_type == DataType.I64:
-            left_value = self._widen_if_needed(left_value, left_type, "i64")
-            right_value = self._widen_if_needed(right_value, right_type, "i64")
+            left_value = self.__widen_if_needed(left_value, left_type, "i64")
+            right_value = self.__widen_if_needed(right_value, right_type, "i64")
         
         llvm_op = node.operator.to_llvm()
         self.translated_lines.append(
             f"  {temp_reg} = {llvm_op} {llvm_type} {left_value}, {right_value}")
 
-    def _widen_if_needed(self, value, current_type, target_type):
+    def __widen_if_needed(self, value, current_type, target_type):
         if target_type == "i64" and current_type == DataType.I32:
-            ext_reg = self._get_temp_register()
+            ext_reg = self.__get_temp_register()
             self.translated_lines.append(f"  {ext_reg} = sext i32 {value} to i64")
             return ext_reg
         return value
     
     def visit_id(self, node):
-        return self._get_current_register(node.value)
+        return self.__get_current_register(node.value)
 
     def visit_number(self, node):
         return node.value
@@ -147,7 +147,7 @@ define void @printResult(i32 %val) {
     def visit_boolean(self, node):
         return Boolean.from_string(node.value).to_llvm()
 
-    def _get_variable_register(self, variable: str) -> str:
+    def __get_variable_register(self, variable: str) -> str:
         if variable not in self.variable_versions:
             self.variable_versions[variable] = 0
             return f"%{variable}"
@@ -155,19 +155,19 @@ define void @printResult(i32 %val) {
             self.variable_versions[variable] += 1
             return f"%{variable}.{self.variable_versions[variable]}"
 
-    def _get_current_register(self, variable: str) -> str:
+    def __get_current_register(self, variable: str) -> str:
         if variable not in self.variable_versions or self.variable_versions[variable] == 0:
             return f"%{variable}"
         return f"%{variable}.{self.variable_versions[variable]}"
 
-    def _get_temp_register(self) -> str:
+    def __get_temp_register(self) -> str:
         reg = f"%_temp_{self.temp_counter}"
         self.temp_counter += 1
         return reg
 
-    def _infer_operand_type(self, left_node, right_node) -> str:
-        left_type = self._get_node_type(left_node)
-        right_type = self._get_node_type(right_node)
+    def __infer_operand_type(self, left_node, right_node) -> str:
+        left_type = self.__get_node_type(left_node)
+        right_type = self.__get_node_type(right_node)
         
         if left_type == DataType.I64 or right_type == DataType.I64:
             return "i64"
@@ -176,7 +176,7 @@ define void @printResult(i32 %val) {
         else:
             return "i1"
 
-    def _get_node_type(self, node) -> DataType:
+    def __get_node_type(self, node) -> DataType:
         if isinstance(node, IDNode):
             return self.variable_types[node.value]
         if isinstance(node, NumberNode):
@@ -191,31 +191,40 @@ define void @printResult(i32 %val) {
         return DataType.I32
 
     def visit_if_statement(self, node: IfNode):
-        label_id = self.label_counter
-        self.label_counter += 1
-
-        then_label = f"then_{label_id}"
-        else_label = f"else_{label_id}" if node.else_block else f"end_{label_id}"
-        end_label = f"end_{label_id}"
+        label_id = self.__get_next_label_id()
+        then_label, else_label, end_label = self.__generate_if_labels(label_id, node.else_block)
 
         condition_value = node.condition.accept(self)
-
         self.translated_lines.append(
             f"  br i1 {condition_value}, label %{then_label}, label %{else_label}")
 
-
-        self.translated_lines.append(f"{then_label}:")
-        node.then_block.accept(self)
-        if not node.then_block.return_node:
-            self.translated_lines.append(f"  br label %{end_label}")
+        self.__emit_block_with_label(node.then_block, then_label, end_label)
 
         if node.else_block:
-            self.translated_lines.append(f"{else_label}:")
-            node.else_block.accept(self)
-            if not node.else_block.return_node:
-                self.translated_lines.append(f"  br label %{end_label}")
+            self.__emit_block_with_label(node.else_block, else_label, end_label)
 
-        self.translated_lines.append(f"{end_label}:")
+        self._emit_label(end_label)
+
+    def __get_next_label_id(self) -> int:
+        label_id = self.label_counter
+        self.label_counter += 1
+        return label_id
+
+    @staticmethod
+    def __generate_if_labels(label_id: int, has_else: bool) -> tuple[str, str, str]:
+        then_label = f"then_{label_id}"
+        else_label = f"else_{label_id}" if has_else else f"end_{label_id}"
+        end_label = f"end_{label_id}"
+        return then_label, else_label, end_label
+
+    def __emit_block_with_label(self, block: CodeBlockNode, label: str, end_label: str):
+        self._emit_label(label)
+        block.accept(self)
+        if not block.return_node:
+            self.translated_lines.append(f"  br label %{end_label}")
+
+    def _emit_label(self, label: str):
+        self.translated_lines.append(f"{label}:")
 
     def visit_code_block(self, node: CodeBlockNode):
         for n in node.statements:
@@ -226,7 +235,7 @@ define void @printResult(i32 %val) {
     def visit_unary_operation(self, node: UnaryOpNode):
         if node.operator == "!":
             operand = node.operand.accept(self)
-            temp_reg = self._get_temp_register()
+            temp_reg = self.__get_temp_register()
             self.translated_lines.append(f"  {temp_reg} = xor i1 {operand}, 1")
             return temp_reg
 

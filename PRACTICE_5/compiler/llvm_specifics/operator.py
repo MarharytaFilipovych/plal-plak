@@ -9,6 +9,7 @@ class Operator(Enum):
     EQUALS = ("==", 'icmp eq')
     NOT_EQUALS = ("!=", 'icmp ne')
 
+
     def __init__(self, symbol: str, llvm_operator: str):
         self.symbol = symbol
         self.llvm_operator = llvm_operator

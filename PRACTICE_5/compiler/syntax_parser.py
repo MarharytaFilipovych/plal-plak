@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from typing import Union
+from typing import Union, Optional
 
 from .node.assign_node import AssignNode
 from .node.binary_op_node import BinaryOpNode
@@ -50,8 +50,15 @@ class SyntaxParser:
         return self.__eat()
 
     def parse_program(self) -> ProgramNode:
-        statements = []
         self.__skip_newlines()
+        statements = self.__parse_statements()
+        return_statement = self.__parse_program_return()
+        self.__check_program_end()
+
+        return ProgramNode(statements, return_statement)
+
+    def __parse_statements(self) -> list[StmtNode]:
+        statements = []
 
         while True:
             token = self.__peek()
@@ -64,17 +71,20 @@ class SyntaxParser:
 
             statement = self.__parse_statement()
             statements.append(statement)
-            self.__expect_newline_or_end()
-            self.__skip_newlines()
+            self.__consume_newline_and_skip()
 
+        return statements
+
+    def __parse_program_return(self) -> ReturnNode:
         return_statement = self.__parse_return()
         self.__skip_newlines()
+        return return_statement
 
+    def __check_program_end(self):
         if self.__peek() and self.__peek().token_type != TokenType.THE_END:
-            raise ValueError(f"I did not want you to place this awful  "
-                             f"content after the return statement at line {self.__peek().line}")
-
-        return ProgramNode(statements, return_statement)
+            raise ValueError(
+                f"I did not want you to place this awful content "
+                f"after the return statement at line {self.__peek().line}")
 
     def __parse_statement(self) -> StmtNode:
         token = self.__peek()
@@ -107,7 +117,20 @@ class SyntaxParser:
         if token and token.token_type == TokenType.NEWLINE:
             self.__eat()
 
+    def __consume_newline_and_skip(self):
+        self.__expect_newline_or_end()
+        self.__skip_newlines()
+
     def __parse_declaration(self) -> DeclNode:
+        var_type = self.__parse_type()
+        can_mutate = self.__parse_mutability()
+        token_variable = self.__expect_token(TokenType.VARIABLE)
+        variable = token_variable.value
+        init_expr = self.__parse_initializer()
+
+        return DeclNode(variable, init_expr, token_variable.line, can_mutate, var_type)
+
+    def __parse_type(self) -> DataType:
         type_token = self.__peek()
 
         if type_token.token_type not in [TokenType.I32_TYPE, TokenType.I64_TYPE, TokenType.BOOL]:
@@ -115,20 +138,19 @@ class SyntaxParser:
 
         var_type = DataType.from_string(type_token.value)
         self.__eat()
+        return var_type
 
-        can_mutate = False
+    def __parse_mutability(self) -> bool:
         if self.__peek() and self.__peek().token_type == TokenType.MUT:
-            can_mutate = True
             self.__eat()
+            return True
+        return False
 
-        token_variable = self.__expect_token(TokenType.VARIABLE)
-        variable = token_variable.value
-
+    def __parse_initializer(self) -> ExprNode:
         self.__expect_token(TokenType.LEFT_BRACKET)
         init_expr = self.__parse_expression()
         self.__expect_token(TokenType.RIGHT_BRACKET)
-
-        return DeclNode(variable, init_expr, token_variable.line, can_mutate, var_type)
+        return init_expr
 
     def __parse_assignment(self) -> AssignNode:
         variable_token = self.__expect_token(TokenType.VARIABLE)
@@ -140,24 +162,43 @@ class SyntaxParser:
     def __parse_if_statement(self) -> IfNode:
         if_token = self.__expect_token(TokenType.IF)
         condition = self.__parse_expression()
-        self.__expect_newline_or_end()
-        self.__skip_newlines()
+        self.__consume_newline_and_skip()
+
         then_block = self.__parse_code_block()
-        self.__skip_newlines()
-        else_block = None
-        if self.__peek() and self.__peek().token_type == TokenType.ELSE:
-            self.__eat()
-            self.__expect_newline_or_end()
-            self.__skip_newlines()
-            else_block = self.__parse_code_block()
+        else_block = self.__try_parse_else_block()
 
         return IfNode(condition, then_block, else_block, if_token.line)
 
-    def __parse_code_block(self) -> CodeBlockNode:
-        self.__expect_token(TokenType.LEFT_BRACKET)
-        self.__expect_newline_or_end()
+    def __try_parse_else_block(self) -> Optional[CodeBlockNode]:
+        token = self.__peek()
+
+        if not token or token.token_type != TokenType.NEWLINE:
+            return None
+
+        saved_index = self.current_token_index
+        self.__eat()
         self.__skip_newlines()
 
+        if self.__peek() and self.__peek().token_type == TokenType.ELSE:
+            self.__eat()
+            self.__consume_newline_and_skip()
+            return self.__parse_code_block()
+        else:
+            self.current_token_index = saved_index
+            return None
+
+    def __parse_code_block(self) -> CodeBlockNode:
+        self.__expect_token(TokenType.LEFT_BRACKET)
+        self.__consume_newline_and_skip()
+
+        statements, return_node = self.__parse_block_contents()
+
+        self.__expect_token(TokenType.RIGHT_BRACKET)
+        scope_id = self.next_scope_id
+        self.next_scope_id += 1
+        return CodeBlockNode(statements, return_node, scope_id)
+
+    def __parse_block_contents(self) -> tuple[list[StmtNode], ReturnNode | None]:
         statements = []
         return_node = None
 
@@ -172,24 +213,21 @@ class SyntaxParser:
 
             if token.token_type == TokenType.RETURN:
                 return_node = self.__parse_return()
-                self.__expect_newline_or_end()
-                self.__skip_newlines()
-                next_token = self.__peek()
-                if next_token and next_token.token_type != TokenType.RIGHT_BRACKET:
-                    raise ValueError(
-                        f"Code after return statement is not allowed at line {next_token.line}!"
-                    )
+                self.__consume_newline_and_skip()
+                self.__check_no_code_after_return()
                 break
 
             statement = self.__parse_statement()
             statements.append(statement)
-            self.__expect_newline_or_end()
-            self.__skip_newlines()
+            self.__consume_newline_and_skip()
 
-        self.__expect_token(TokenType.RIGHT_BRACKET)
-        scope_id = self.next_scope_id
-        self.next_scope_id += 1
-        return CodeBlockNode(statements, return_node, scope_id)
+        return statements, return_node
+
+    def __check_no_code_after_return(self):
+        next_token = self.__peek()
+        if next_token and next_token.token_type != TokenType.RIGHT_BRACKET:
+            raise ValueError(
+                f"Code after return statement is not allowed at line {next_token.line}!")
 
     def __parse_return(self) -> ReturnNode:
         self.__expect_token(TokenType.RETURN)
@@ -212,14 +250,19 @@ class SyntaxParser:
     def __parse_factor(self) -> Union[FactorNode, UnaryOpNode]:
         token = self.__peek()
 
-        if not token:
-            raise ValueError(
-                f"You should have used either a number, a variable, or a boolean, "
-                f"but you decided to abandon your work!")
-        if token.token_type == TokenType.NOT:
+        if token and token.token_type == TokenType.NOT:
             self.__eat()
             operand = self.__parse_factor()
             return UnaryOpNode("!", operand)
+
+        return self.__parse_primary()
+
+    def __parse_primary(self) -> FactorNode:
+        token = self.__peek()
+
+        if not token:
+            raise ValueError(f"You should have used either a number, a variable, or a boolean, "
+            f"but you decided to abandon your work!")
 
         match token.token_type:
             case TokenType.NUMBER:
@@ -232,6 +275,5 @@ class SyntaxParser:
                 self.__eat()
                 return BooleanNode(token.value)
             case _:
-                raise ValueError(
-                    f"You should have used either a number, a variable, or a boolean "
-                    f"at line {token.line}, not {token.value}!")
+                raise ValueError(f"You should have used either a number, a variable, or a boolean "
+                f"at line {token.line}, not {token.value}!")
