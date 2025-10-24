@@ -20,6 +20,7 @@ class CodeGenerator(ASTVisitor):
         self.translated_lines: list[str] = []
         self.temp_counter = 0
         self.label_counter = 0
+        self.max_versions: dict[str, int] = {}
 
     @staticmethod
     def get_print_function_llvm() -> str:
@@ -148,12 +149,14 @@ define void @printResult(i32 %val) {
         return Boolean.from_string(node.value).to_llvm()
 
     def __get_variable_register(self, variable: str) -> str:
-        if variable not in self.variable_versions:
+        if variable not in self.max_versions:
+            self.max_versions[variable] = 0
             self.variable_versions[variable] = 0
             return f"%{variable}"
-        else:
-            self.variable_versions[variable] += 1
-            return f"%{variable}.{self.variable_versions[variable]}"
+        
+        self.max_versions[variable] += 1
+        self.variable_versions[variable] = self.max_versions[variable]
+        return f"%{variable}.{self.variable_versions[variable]}"
 
     def __get_current_register(self, variable: str) -> str:
         if variable not in self.variable_versions or self.variable_versions[variable] == 0:
@@ -227,10 +230,17 @@ define void @printResult(i32 %val) {
         self.translated_lines.append(f"{label}:")
 
     def visit_code_block(self, node: CodeBlockNode):
+        # Save state before entering block
+        saved_versions = self.variable_versions.copy()
+        saved_types = self.variable_types.copy()
+        
         for n in node.statements:
             n.accept(self)
         if node.return_node:
             node.return_node.accept(self)
+        
+        self.variable_versions = saved_versions
+        self.variable_types = saved_types
 
     def visit_unary_operation(self, node: UnaryOpNode):
         if node.operator == "!":
