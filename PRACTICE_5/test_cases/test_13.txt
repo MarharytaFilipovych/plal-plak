@@ -1,0 +1,5 @@
+i32 x{15}
+i32 y{20}
+bool result{x == y}
+bool check{x != y}
+return check

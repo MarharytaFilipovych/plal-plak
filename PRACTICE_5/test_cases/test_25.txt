@@ -1,0 +1,7 @@
+bool a{true}
+bool b{!a}
+if b
+{
+    return 0
+}
+return 1
