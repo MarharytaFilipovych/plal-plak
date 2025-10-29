@@ -1,3 +1,0 @@
-i64 big{5000000000}
-i32 small{big}
-return small

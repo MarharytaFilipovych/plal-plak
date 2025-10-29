@@ -1,6 +1,0 @@
-// This is a test
-i32 value{42}
-
-// Calculate result
-i32 result{value * 2}
-return result

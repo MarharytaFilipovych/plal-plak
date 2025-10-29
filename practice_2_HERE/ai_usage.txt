@@ -1,4 +1,0 @@
-Resources used:
-* https://www.digitalocean.com/community/tutorials/python-str-repr-functions
-* https://www.geeksforgeeks.org/python/enum-in-python/
-* https://claude.ai/share/1774eaee-a93e-4c98-9915-2d08d53ef22b

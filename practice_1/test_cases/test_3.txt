@@ -1,4 +1,0 @@
-var x
-var y
-y = x + 5
-return y

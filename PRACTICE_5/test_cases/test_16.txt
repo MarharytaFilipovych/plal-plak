@@ -1,4 +1,0 @@
-i32 small{100}
-i64 large{100}
-bool areEqual{small == large}
-return areEqual

@@ -1,4 +1,0 @@
-var counter
-counter = 1
-counter = counter + 5
-return counter

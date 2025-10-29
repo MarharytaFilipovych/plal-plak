@@ -1,8 +1,0 @@
-Links to chats:
-- https://claude.ai/share/5483fb93-4734-4bd7-9ff1-2e11e2bba20b
-- https://claude.ai/share/9d59c508-f9e9-458e-959d-31abecac0829
-- https://claude.ai/share/aa396771-dc5c-4e47-9d1b-6d45a4c2aa72
-
-Resources:
-- https://www.geeksforgeeks.org/python/python-classes-and-objects/
-- https://www.geeksforgeeks.org/linux-unix/bash-scripting-for-loop/
