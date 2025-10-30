@@ -13,9 +13,9 @@ class DataType(Enum):
 
     @staticmethod
     def from_string(type_str: str) -> 'DataType':
-        for vt in DataType:
-            if vt.keyword == type_str:
-                return vt
+        for data_type in DataType:
+            if data_type.keyword == type_str:
+                return data_type
         raise ValueError(f"This type does not exist: {type_str}")
 
     def to_llvm(self) -> str:
@@ -24,3 +24,6 @@ class DataType(Enum):
     def __str__(self) -> str:
         return self.keyword
 
+    @staticmethod
+    def is_data_type(type_str: str) -> bool:
+        return any(data_type.keyword == type_str for data_type in DataType)

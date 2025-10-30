@@ -3,12 +3,14 @@ from typing import Optional
 
 from .llvm_specifics.data_type import DataType
 from .variable_info import VariableInfo
+from .node.struct_decl_node import StructField
 
 
 class Context:
     def __init__(self):
         self.scopes: list[dict[str, VariableInfo]] = [{}]
-        self.currently_initializing: Optional[str]
+        self.currently_initializing: Optional[str] = None
+        self.struct_definitions: dict[str, list[StructField]] = {}
 
     def enter_scope(self) -> int:
         self.scopes.append({})
@@ -17,7 +19,7 @@ class Context:
         if len(self.scopes) > 1:
             self.scopes.pop()
 
-    def declare_variable(self, name: str, data_type: DataType, mutable: bool):
+    def declare_variable(self, name: str, data_type: DataType | str, mutable: bool):
         current_scope = self.scopes[-1]
         if name in current_scope:
             return False
@@ -34,7 +36,7 @@ class Context:
     def is_declared_in_current_scope(self, name: str) -> bool:
         return name in self.scopes[-1]
 
-    def get_variable_type(self, name: str) -> Optional[DataType]:
+    def get_variable_type(self, name: str) -> Optional[DataType | str]:
         var_info = self.lookup_variable(name)
         return var_info.data_type if var_info else None
 
@@ -44,3 +46,12 @@ class Context:
 
     def is_variable_declared(self, name: str) -> bool:
         return self.lookup_variable(name) is not None
+
+    def define_struct(self, struct_name: str, fields: list[StructField]):
+        self.struct_definitions[struct_name] = fields
+
+    def is_struct_defined(self, struct_name: str) -> bool:
+        return struct_name in self.struct_definitions
+
+    def get_struct_definition(self, struct_name: str) -> list[StructField]:
+        return self.struct_definitions[struct_name]

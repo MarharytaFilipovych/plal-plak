@@ -23,5 +23,6 @@ PREDEFINED_CHARS: dict = {
     '{': TokenType.LEFT_BRACKET,
     '}': TokenType.RIGHT_BRACKET,
     '+': TokenType.PLUS,
-    '*': TokenType.MULTIPLY
+    '*': TokenType.MULTIPLY,
+    ',': TokenType.COMMA
 }

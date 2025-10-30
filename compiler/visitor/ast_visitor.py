@@ -62,9 +62,9 @@ class ASTVisitor(ABC):
         pass
 
     @abstractmethod
-    def visit_struct_decl(self, node: StructDeclNode):
+    def visit_struct_declaration(self, node: StructDeclNode):
         pass
 
     @abstractmethod
-    def visit_struct_init(self, node: StructInitNode):
+    def visit_struct_initialization(self, node: StructInitNode):
         pass

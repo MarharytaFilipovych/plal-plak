@@ -28,3 +28,8 @@ class TokenType(Enum):
     NOT = auto()
     STRUCT = auto()
     FN = auto()
+    COMMA = auto()
+
+    @staticmethod
+    def is_data_type(token_type: 'TokenType') -> bool:
+        return token_type in {TokenType.I32_TYPE, TokenType.I64_TYPE, TokenType.BOOL}

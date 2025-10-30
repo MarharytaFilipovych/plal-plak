@@ -14,4 +14,4 @@ class StructInitNode(FactorNode):
         self.init_expressions = init_expressions
 
     def accept(self, visitor: 'ASTVisitor'):
-         return visitor.visit_struct_init(self)
+         return visitor.visit_struct_initialization(self)

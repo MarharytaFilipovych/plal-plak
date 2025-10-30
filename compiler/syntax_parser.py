@@ -16,6 +16,8 @@ from .node.stmt_node import StmtNode
 from .llvm_specifics.data_type import DataType
 from .llvm_specifics.operator import Operator
 from .node.bool_node import BooleanNode
+from .node.struct_decl_node import StructDeclNode, StructField
+from .node.struct_init_node import StructInitNode
 from .node.unary_op_node import UnaryOpNode
 from .token.token_type import TokenType
 from .token.token_class import Token
@@ -26,6 +28,7 @@ class SyntaxParser:
         self.tokens = tokens
         self.current_token_index = 0
         self.next_scope_id = 1
+        self.declared_structs: set[str] = set()
 
     def __peek(self) -> Token:
         return self.tokens[self.current_token_index] if self.current_token_index < len(self.tokens) else None
@@ -92,9 +95,13 @@ class SyntaxParser:
         if not token:
             raise ValueError("Why did you decide to abandon your work?! I want a statement!")
 
-        if token.token_type in [TokenType.I32_TYPE, TokenType.I64_TYPE, TokenType.BOOL]:
-            return self.__parse_declaration()
+        if token.token_type == TokenType.STRUCT:
+            return self.__parse_struct_declaration()
+        elif token.token_type in [TokenType.I32_TYPE, TokenType.I64_TYPE, TokenType.BOOL]:
+            return self.__parse_variable_declaration()
         elif token.token_type == TokenType.VARIABLE:
+            if self.__is_struct_type():
+                return self.__parse_variable_declaration()
             return self.__parse_assignment()
         elif token.token_type == TokenType.IF:
             return self.__parse_if_statement()
@@ -121,24 +128,72 @@ class SyntaxParser:
         self.__expect_newline_or_end()
         self.__skip_newlines()
 
-    def __parse_declaration(self) -> DeclNode:
+    def __is_struct_type(self) -> bool:
+        token = self.__peek()
+        return token and token.token_type == TokenType.VARIABLE and token.value in self.declared_structs
+
+    def __parse_variable_declaration(self) -> DeclNode:
         var_type = self.__parse_type()
         can_mutate = self.__parse_mutability()
         token_variable = self.__expect_token(TokenType.VARIABLE)
-        variable = token_variable.value
         init_expr = self.__parse_initializer()
 
-        return DeclNode(variable, init_expr, token_variable.line, can_mutate, var_type)
+        data_type = DataType.from_string(var_type) if var_type in ["i32", "i64", "bool"] else var_type
+        return DeclNode(token_variable.value, init_expr, token_variable.line, can_mutate, data_type)
 
-    def __parse_type(self) -> DataType:
-        type_token = self.__peek()
+    def __parse_struct_declaration(self) -> StructDeclNode:
+        self.__expect_token(TokenType.STRUCT)
+        struct_token = self.__expect_token(TokenType.VARIABLE)
+        struct_name = struct_token.value
 
-        if type_token.token_type not in [TokenType.I32_TYPE, TokenType.I64_TYPE, TokenType.BOOL]:
-            raise ValueError(f"I expected some type declaration at line {type_token.line}!")
+        if struct_name in self.declared_structs:
+            raise ValueError(f"The struct {struct_name} was already declared, you dummy!")
 
-        var_type = DataType.from_string(type_token.value)
-        self.__eat()
-        return var_type
+        self.declared_structs.add(struct_name)
+        self.__consume_newline_and_skip()
+        self.__expect_token(TokenType.LEFT_BRACKET)
+        self.__consume_newline_and_skip()
+
+        fields = self.__parse_struct_fields()
+
+        self.__expect_token(TokenType.RIGHT_BRACKET)
+        return StructDeclNode(struct_name, fields, struct_token.line)
+
+    def __parse_struct_fields(self) -> list[StructField]:
+        fields: list[StructField] = []
+        while self.__peek() and self.__peek().token_type != TokenType.RIGHT_BRACKET:
+            var_type = self.__parse_type()
+            can_mutate = self.__parse_mutability()
+            token_variable = self.__expect_token(TokenType.VARIABLE)
+            fields.append(StructField(var_type, token_variable.value, can_mutate))
+            self.__consume_newline_and_skip()
+        return fields
+
+    def __parse_struct_initialization(self, struct_type: str, line: int) -> StructInitNode:
+        self.__expect_token(TokenType.LEFT_BRACKET)
+        init_exprs: list[ExprNode] = []
+
+        if self.__peek() and self.__peek().token_type != TokenType.RIGHT_BRACKET:
+            init_exprs.append(self.__parse_expression())
+
+            while self.__peek() and self.__peek().token_type == TokenType.COMMA:
+                self.__eat()
+                if self.__peek() and self.__peek().token_type in [TokenType.COMMA, TokenType.RIGHT_BRACKET]:
+                    raise ValueError(f"I expected expression after comma at line {self.__peek().line}!")
+                init_exprs.append(self.__parse_expression())
+
+        self.__expect_token(TokenType.RIGHT_BRACKET)
+        return StructInitNode(struct_type, init_exprs, line)
+
+    def __parse_type(self) -> str:
+        token = self.__peek()
+
+        if (TokenType.is_data_type(token.token_type)) or \
+                (token.token_type == TokenType.VARIABLE and token.value in self.declared_structs):
+            self.__eat()
+            return token.value
+        raise ValueError(
+            f"I expected some type declaration at line {token.line} but I cannot recognize this type: {token.value}!")
 
     def __parse_mutability(self) -> bool:
         if self.__peek() and self.__peek().token_type == TokenType.MUT:
@@ -198,7 +253,7 @@ class SyntaxParser:
         self.next_scope_id += 1
         return CodeBlockNode(statements, return_node, scope_id)
 
-    def __parse_block_contents(self) -> tuple[list[StmtNode], ReturnNode | None]:
+    def __parse_block_contents(self) -> tuple[list[StmtNode], Optional[ReturnNode]]:
         statements = []
         return_node = None
 
@@ -226,8 +281,7 @@ class SyntaxParser:
     def __check_no_code_after_return(self):
         next_token = self.__peek()
         if next_token and next_token.token_type != TokenType.RIGHT_BRACKET:
-            raise ValueError(
-                f"Code after return statement is not allowed at line {next_token.line}!")
+            raise ValueError(f"Code after return statement is not allowed at line {next_token.line}!")
 
     def __parse_return(self) -> ReturnNode:
         self.__expect_token(TokenType.RETURN)
@@ -262,19 +316,23 @@ class SyntaxParser:
 
         if not token:
             raise ValueError(f"You should have used either a number, a variable, or a boolean, "
-            f"but you decided to abandon your work!")
-        token_type = token.token_type
-        line = token.line
-        value = token.value
-        self.__eat()
+                             f"but you decided to abandon your work!")
 
-        match token_type:
+        match token.token_type:
             case TokenType.NUMBER:
+                self.__eat()
                 return NumberNode(token.value)
             case TokenType.VARIABLE:
+                self.__eat()
+                if self.__is_struct_initialization(token.value):
+                    return self.__parse_struct_initialization(token.value, token.line)
                 return IDNode(token.value, token.line)
             case TokenType.TRUE | TokenType.FALSE:
+                self.__eat()
                 return BooleanNode(token.value)
             case _:
                 raise ValueError(f"You should have used either a number, a variable, or a boolean "
-                f"at line {line}, not {value}!")
+                                 f"at line {token.line}, not {token.value}!")
+
+    def __is_struct_initialization(self, value: str) -> bool:
+        return self.__peek() and self.__peek().token_type == TokenType.LEFT_BRACKET and value in self.declared_structs

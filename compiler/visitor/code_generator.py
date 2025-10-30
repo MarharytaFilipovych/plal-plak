@@ -253,8 +253,8 @@ define void @printResult(i32 %val) {
 
         raise ValueError(f"We do not support this unary operator: {node.operator}")
 
-    def visit_struct_decl(self, node: StructDeclNode):
+    def visit_struct_declaration(self, node: StructDeclNode):
         pass
 
-    def visit_struct_init(self, node: StructInitNode):
+    def visit_struct_initialization(self, node: StructInitNode):
         pass
