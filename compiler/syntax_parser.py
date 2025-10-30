@@ -263,17 +263,18 @@ class SyntaxParser:
         if not token:
             raise ValueError(f"You should have used either a number, a variable, or a boolean, "
             f"but you decided to abandon your work!")
+        token_type = token.token_type
+        line = token.line
+        value = token.value
+        self.__eat()
 
-        match token.token_type:
+        match token_type:
             case TokenType.NUMBER:
-                self.__eat()
                 return NumberNode(token.value)
             case TokenType.VARIABLE:
-                self.__eat()
                 return IDNode(token.value, token.line)
             case TokenType.TRUE | TokenType.FALSE:
-                self.__eat()
                 return BooleanNode(token.value)
             case _:
                 raise ValueError(f"You should have used either a number, a variable, or a boolean "
-                f"at line {token.line}, not {token.value}!")
+                f"at line {line}, not {value}!")

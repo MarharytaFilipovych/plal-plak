@@ -9,6 +9,8 @@ from ..node.number_node import NumberNode
 from ..node.bool_node import BooleanNode
 from ..node.binary_op_node import BinaryOpNode
 from ..constants import I32_MAX, I32_MIN
+from ..node.struct_decl_node import StructDeclNode
+from ..node.struct_init_node import StructInitNode
 from ..node.unary_op_node import UnaryOpNode
 
 
@@ -250,3 +252,9 @@ define void @printResult(i32 %val) {
             return temp_reg
 
         raise ValueError(f"We do not support this unary operator: {node.operator}")
+
+    def visit_struct_decl(self, node: StructDeclNode):
+        pass
+
+    def visit_struct_init(self, node: StructInitNode):
+        pass

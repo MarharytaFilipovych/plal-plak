@@ -26,3 +26,5 @@ class TokenType(Enum):
     IF = auto()
     ELSE = auto()
     NOT = auto()
+    STRUCT = auto()
+    FN = auto()

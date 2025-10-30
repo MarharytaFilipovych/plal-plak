@@ -6,11 +6,13 @@ from ..node.binary_op_node import BinaryOpNode
 from ..node.bool_node import BooleanNode
 from ..node.code_block_node import CodeBlockNode
 from ..node.decl_node import DeclNode
+from ..node.struct_init_node import StructInitNode
 from ..node.id_node import IDNode
 from ..node.if_node import IfNode
 from ..node.number_node import NumberNode
 from ..node.program_node import ProgramNode
 from ..node.return_node import ReturnNode
+from ..node.struct_decl_node import StructDeclNode
 from ..node.unary_op_node import UnaryOpNode
 
 
@@ -57,4 +59,12 @@ class ASTVisitor(ABC):
 
     @abstractmethod
     def visit_unary_operation(self, node: UnaryOpNode):
+        pass
+
+    @abstractmethod
+    def visit_struct_decl(self, node: StructDeclNode):
+        pass
+
+    @abstractmethod
+    def visit_struct_init(self, node: StructInitNode):
         pass

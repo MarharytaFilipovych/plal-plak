@@ -12,6 +12,8 @@ from ..node.id_node import IDNode
 from ..node.number_node import NumberNode
 from ..node.program_node import ProgramNode
 from ..node.return_node import ReturnNode
+from ..node.struct_decl_node import StructDeclNode
+from ..node.struct_init_node import StructInitNode
 from ..node.unary_op_node import UnaryOpNode
 
 
@@ -131,6 +133,12 @@ class SemanticAnalyzer(ASTVisitor):
                     f"but you applied it to {operand_type}! Do you think it is okay?")
             return DataType.BOOL
         raise ValueError(f"Unknown unary operator: {node.operator}")
+
+    def visit_struct_decl(self, node: StructDeclNode):
+        pass
+
+    def visit_struct_init(self, node: StructInitNode):
+        pass
 
     @staticmethod
     def __is_type_compatible(source_type: DataType, target_type: DataType) -> bool:

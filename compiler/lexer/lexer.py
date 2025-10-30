@@ -1,31 +1,11 @@
 #!/usr/bin/env python3
 from .lexer_state import LexerState
+from .lexer_constants import WHITESPACE, OPERATORS, KEYWORDS, PREDEFINED_CHARS
 from ..token.token_type import TokenType
 from ..token.token_class import Token
 
 
 class Lexer:
-    WHITESPACE = ' \t\r'
-    OPERATORS = '+-*='
-    KEYWORDS: dict = {
-        "i32": TokenType.I32_TYPE,
-        "mut": TokenType.MUT,
-        "return": TokenType.RETURN,
-        "false": TokenType.FALSE,
-        "true": TokenType.TRUE,
-        "i64": TokenType.I64_TYPE,
-        "bool": TokenType.BOOL,
-        "if": TokenType.IF,
-        "else": TokenType.ELSE
-    }
-
-    PREDEFINED_CHARS: dict = {
-        '{': TokenType.LEFT_BRACKET,
-        '}': TokenType.RIGHT_BRACKET,
-        '+': TokenType.PLUS,
-        '*': TokenType.MULTIPLY
-    }
-
     def __init__(self, source: str):
         self.source = source
         self.current_position = 0
@@ -40,11 +20,11 @@ class Lexer:
 
     @staticmethod
     def __is_whitespace(char: str):
-        return char is not None and char in Lexer.WHITESPACE
+        return char is not None and char in WHITESPACE
 
     @staticmethod
     def __is_operator(char: str):
-        return char is not None and char in Lexer.OPERATORS
+        return char is not None and char in OPERATORS
 
     def __add_token(self, token_type: TokenType, value: str, line: int = None, index: int = None):
         line = line if line is not None else self.line
@@ -96,8 +76,8 @@ class Lexer:
             self.__move_to_next_char()
             return
 
-        if char in Lexer.PREDEFINED_CHARS:
-            self.__add_token(Lexer.PREDEFINED_CHARS[char], char)
+        if char in PREDEFINED_CHARS:
+            self.__add_token(PREDEFINED_CHARS[char], char)
             self.__move_to_next_char()
             return
 
@@ -171,7 +151,7 @@ class Lexer:
         self.__move_to_next_char()
 
     def __build_identifier_token(self, value: str):
-        token_type = Lexer.KEYWORDS.get(value, TokenType.VARIABLE)
+        token_type = KEYWORDS.get(value, TokenType.VARIABLE)
         self.__add_token(token_type, value, self.current_token_start_line, self.current_token_start_index)
 
     def __build_number_token(self, value: str):
@@ -192,3 +172,6 @@ class Lexer:
                 self.__build_identifier_token(value)
             case LexerState.NUMBER:
                 self.__build_number_token(value)
+
+    def __manage_struct_state(self, value: str):
+        pass

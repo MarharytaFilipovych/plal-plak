@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from typing import Optional
+
 from .llvm_specifics.data_type import DataType
 from .variable_info import VariableInfo
 
@@ -6,7 +8,7 @@ from .variable_info import VariableInfo
 class Context:
     def __init__(self):
         self.scopes: list[dict[str, VariableInfo]] = [{}]
-        self.currently_initializing: str | None = None
+        self.currently_initializing: Optional[str]
 
     def enter_scope(self) -> int:
         self.scopes.append({})
@@ -23,7 +25,7 @@ class Context:
         current_scope[name] = VariableInfo(data_type, mutable)
         return True
 
-    def lookup_variable(self, name: str) -> VariableInfo | None:
+    def lookup_variable(self, name: str) -> Optional[VariableInfo]:
         for scope in reversed(self.scopes):
             if name in scope:
                 return scope[name]
@@ -32,7 +34,7 @@ class Context:
     def is_declared_in_current_scope(self, name: str) -> bool:
         return name in self.scopes[-1]
 
-    def get_variable_type(self, name: str) -> DataType | None:
+    def get_variable_type(self, name: str) -> Optional[DataType]:
         var_info = self.lookup_variable(name)
         return var_info.data_type if var_info else None
 

@@ -1,0 +1,6 @@
+.idea
+exe
+llm
+obj
+**/__pycache__
+.vscode
