@@ -54,4 +54,4 @@ class Context:
         return struct_name in self.struct_definitions
 
     def get_struct_definition(self, struct_name: str) -> list[StructField]:
-        return self.struct_definitions[struct_name]
+        return [] if struct_name not in self.struct_definitions else self.struct_definitions[struct_name]

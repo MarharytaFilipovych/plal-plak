@@ -17,6 +17,8 @@ from .llvm_specifics.data_type import DataType
 from .llvm_specifics.operator import Operator
 from .node.bool_node import BooleanNode
 from .node.struct_decl_node import StructDeclNode, StructField
+from .node.struct_field_assign_node import StructFieldAssignNode
+from .node.struct_field_node import StructFieldNode
 from .node.struct_init_node import StructInitNode
 from .node.unary_op_node import UnaryOpNode
 from .token.token_type import TokenType
@@ -209,10 +211,14 @@ class SyntaxParser:
 
     def __parse_assignment(self) -> AssignNode:
         variable_token = self.__expect_token(TokenType.VARIABLE)
-        variable = variable_token.value
+        field_chain = self.__gather_field_accessors(variable_token.value) if self.__is_field_access() else None
+
         self.__expect_token(TokenType.ASSIGNMENT)
         value_expr = self.__parse_expression()
-        return AssignNode(variable, value_expr, variable_token.line)
+
+        return (StructFieldAssignNode(StructFieldNode(field_chain, variable_token.line), value_expr, variable_token.line)
+            if field_chain
+            else AssignNode(variable_token.value, value_expr, variable_token.line))
 
     def __parse_if_statement(self) -> IfNode:
         if_token = self.__expect_token(TokenType.IF)
@@ -324,8 +330,13 @@ class SyntaxParser:
                 return NumberNode(token.value)
             case TokenType.VARIABLE:
                 self.__eat()
+
+                if self.__is_field_access():
+                    return StructFieldNode(self.__gather_field_accessors(token.value), token.line)
+
                 if self.__is_struct_initialization(token.value):
                     return self.__parse_struct_initialization(token.value, token.line)
+
                 return IDNode(token.value, token.line)
             case TokenType.TRUE | TokenType.FALSE:
                 self.__eat()
@@ -336,3 +347,16 @@ class SyntaxParser:
 
     def __is_struct_initialization(self, value: str) -> bool:
         return self.__peek() and self.__peek().token_type == TokenType.LEFT_BRACKET and value in self.declared_structs
+
+    def __is_field_access(self) -> bool:
+        self.__peek() and self.__peek().token_type == TokenType.DOT
+
+    def __gather_field_accessors(self, base_variable: str) -> list[str]:
+        field_chain = [base_variable]
+
+        while self.__is_field_access():
+            self.__expect_token(TokenType.DOT)
+            field_token = self.__expect_token(TokenType.VARIABLE)
+            field_chain.append(field_token.value)
+
+        return field_chain

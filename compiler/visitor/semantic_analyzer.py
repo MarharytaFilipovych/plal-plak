@@ -12,6 +12,8 @@ from ..node.id_node import IDNode
 from ..node.number_node import NumberNode
 from ..node.program_node import ProgramNode
 from ..node.return_node import ReturnNode
+from ..node.struct_field_assign_node import StructFieldAssignNode
+from ..node.struct_field_node import StructFieldNode
 from ..node.unary_op_node import UnaryOpNode
 from ..node.struct_decl_node import StructDeclNode
 from ..node.struct_init_node import StructInitNode
@@ -44,19 +46,58 @@ class SemanticAnalyzer(ASTVisitor):
         if not self.context.is_struct_defined(node.struct_type):
             raise ValueError(f"No such struct type '{node.struct_type}' at line {node.line}!")
 
-        struct_fields  = self.context.get_struct_definition(node.struct_type)
+        struct_fields = self.context.get_struct_definition(node.struct_type)
 
         if len(node.init_expressions) != len(struct_fields):
-            raise ValueError( f"Struct '{node.struct_type}' expects {len(struct_fields )} fields but you typed {len(node.init_expressions)} at line {node.line}!")
+            raise ValueError(
+                f"Struct '{node.struct_type}' expects {len(struct_fields)} fields but you typed {len(node.init_expressions)} at line {node.line}!")
 
         for i, field in enumerate(struct_fields):
             expr_type = node.init_expressions[i].accept(self)
 
             if not self.__types_match(expr_type, field.data_type):
-                raise ValueError( f"Type mismatch for field '{field.data_type}' in struct '{node.struct_type}': "
-                    f"expected {field.data_type}, but you typed {expr_type} at line {node.line}!")
+                raise ValueError(f"Type mismatch for field '{field.variable}' in struct '{node.struct_type}': "
+                                 f"expected {field.data_type}, but you typed {expr_type} at line {node.line}!")
 
         return node.struct_type
+
+    def visit_struct_field(self, node: StructFieldNode):
+        if not self.context.is_variable_declared(node.value):
+            raise ValueError(f"Variable '{node.value}' not declared at line {node.line}!")
+
+        current_type = self.context.get_variable_type(node.value)
+        base_mutable = self.context.is_variable_mutable(node.value)
+
+        for i in range(1, len(node.field_chain)):
+            field_name = node.field_chain[i]
+
+            if not self.context.is_struct_defined(current_type):
+                raise ValueError( f"Type '{current_type}' is not a struct, cannot access field "
+                    f"'{field_name}' at line {node.line}!")
+
+            struct_fields = self.context.get_struct_definition(current_type)
+            field_info = next((f for f in struct_fields if f.variable == field_name), None)
+
+            if not field_info:
+                raise ValueError(f"Struct '{current_type}' has no field '{field_name}' at line {node.line}!")
+
+            base_mutable = base_mutable and field_info.mutable
+            current_type = field_info.data_type
+
+        node.is_mutable = base_mutable
+        return current_type
+
+    def visit_struct_field_assign(self, node: StructFieldAssignNode):
+        field_type = node.target.accept(self)
+        if not node.target.is_mutable:
+            field_path = '.'.join(node.target.field_chain)
+            raise ValueError( f"Cannot assign to immutable field '{field_path}' at line {node.line}! "
+                f"Either the base object or a field in the chain is not mutable.")
+
+        expr_type = node.expr_node.accept(self)
+        if not self.__types_match(expr_type, field_type):
+            raise ValueError(f"Type mismatch at line {node.line}: "
+                f"cannot assign {expr_type} to {field_type}!")
 
     def visit_declaration(self, node: DeclNode):
         if not self.context.declare_variable(node.variable, node.data_type, node.mutable):
@@ -66,8 +107,8 @@ class SemanticAnalyzer(ASTVisitor):
         expr_type = node.expr_node.accept(self)
 
         if not self.__types_match(expr_type, node.data_type):
-            raise ValueError( f"Types do not match at line {node.line}: "
-                              f"you cannot assign {expr_type} to {node.data_type}! Be careful!")
+            raise ValueError(f"Types do not match at line {node.line}: "
+                             f"you cannot assign {expr_type} to {node.data_type}! Be careful!")
 
         self.context.currently_initializing = None
 
@@ -107,7 +148,7 @@ class SemanticAnalyzer(ASTVisitor):
                 raise ValueError(f"You cannot play math using {node.operator} on booleans!!!")
 
             node.result_type = DataType.I64 if (
-                        left_type == DataType.I64 or right_type == DataType.I64) else DataType.I32
+                    left_type == DataType.I64 or right_type == DataType.I64) else DataType.I32
             return node.result_type
 
         raise ValueError(f"Where did you take this operator from?: {node.operator}")

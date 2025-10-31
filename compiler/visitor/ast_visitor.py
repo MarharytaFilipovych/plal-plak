@@ -6,6 +6,8 @@ from ..node.binary_op_node import BinaryOpNode
 from ..node.bool_node import BooleanNode
 from ..node.code_block_node import CodeBlockNode
 from ..node.decl_node import DeclNode
+from ..node.struct_field_assign_node import StructFieldAssignNode
+from ..node.struct_field_node import StructFieldNode
 from ..node.struct_init_node import StructInitNode
 from ..node.id_node import IDNode
 from ..node.if_node import IfNode
@@ -67,4 +69,12 @@ class ASTVisitor(ABC):
 
     @abstractmethod
     def visit_struct_initialization(self, node: StructInitNode):
+        pass
+
+    @abstractmethod
+    def visit_struct_field_assign(self, node: StructFieldAssignNode):
+        pass
+
+    @abstractmethod
+    def visit_struct_field(self, node: StructFieldNode):
         pass

@@ -29,6 +29,7 @@ class TokenType(Enum):
     STRUCT = auto()
     FN = auto()
     COMMA = auto()
+    DOT = auto()
 
     @staticmethod
     def is_data_type(token_type: 'TokenType') -> bool:
