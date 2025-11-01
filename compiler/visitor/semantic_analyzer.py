@@ -269,7 +269,9 @@ class SemanticAnalyzer(ASTVisitor):
 
     def __declare_function_parameters(self, node: FunctionDeclNode):
         for param in node.params:
-            if not self.context.declare_variable(param.name, param.param_type, mutable=False):
+            # Resolve the parameter type to DataType if it's a primitive type
+            param_type = self.__resolve_type(param.param_type)
+            if not self.context.declare_variable(param.name, param_type, mutable=False):
                 raise ValueError(f"Duplicate parameter '{param.name}' in function '{node.variable}'!")
 
     def __validate_function_return(self, node: FunctionDeclNode):
@@ -277,8 +279,10 @@ class SemanticAnalyzer(ASTVisitor):
             raise ValueError(f"Function '{node.variable}' must have a return statement!")
 
         returned_type = node.body.return_node.expr_node.accept(self)
-        if not self.__types_match(returned_type, node.return_type):
-            raise ValueError(f"Function '{node.variable}' returns {returned_type} but declared as {node.return_type}!")
+        expected_type = self.__resolve_type(node.return_type)
+        
+        if not self.__types_match(returned_type, expected_type):
+            raise ValueError(f"Function '{node.variable}' returns {returned_type} but declared as {expected_type}!")
 
     def visit_function_call(self, node: FunctionCallNode):
         if not self.context.is_function_defined(node.value):
@@ -288,7 +292,8 @@ class SemanticAnalyzer(ASTVisitor):
         self.__validate_argument_count(node, func_info)
         self.__validate_argument_types(node, func_info)
 
-        return func_info.return_type
+        return_type_str = func_info.return_type
+        return self.__resolve_type(return_type_str)
 
     @staticmethod
     def __validate_argument_count(node: FunctionCallNode, func_info):
@@ -297,8 +302,9 @@ class SemanticAnalyzer(ASTVisitor):
                              f"but got {len(node.arguments)} at line {node.line}!")
 
     def __validate_argument_types(self, node: FunctionCallNode, func_info):
-        for i, (arg, expected_type) in enumerate(zip(node.arguments, func_info.param_types)):
+        for i, (arg, expected_type_str) in enumerate(zip(node.arguments, func_info.param_types)):
             arg_type = arg.accept(self)
+            expected_type = self.__resolve_type(expected_type_str)
             if not self.__types_match(arg_type, expected_type):
                 raise ValueError(f"Argument {i + 1} to function '{node.value}' has type {arg_type} "
                                  f"but expected {expected_type} at line {node.line}!")

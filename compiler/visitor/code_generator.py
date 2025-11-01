@@ -32,6 +32,7 @@ class CodeGenerator(ASTVisitor):
         self.struct_definitions: dict[str, list] = {}
         self.struct_type_lines: list[str] = []
         self.function_definitions: list[str] = []
+        self.function_return_types: dict[str, str] = {}  # Maps function name to return type
         self.in_function: bool = False
 
     @staticmethod
@@ -122,14 +123,18 @@ define void @printResult(i32 %val) {
 
         for i, (field_name, field_llvm_type, field_data_type) in enumerate(fields):
             expr_value = node.init_expressions[i].accept(self)
-            expr_value = self.__convert_type_if_needed(
-                expr_value,
-                self.__get_node_type(node.init_expressions[i]),
-                field_data_type
-            )
-
+            expr_type = self.__get_node_type(node.init_expressions[i])
+            
             field_ptr = self.__get_struct_field_ptr(node.struct_type, struct_reg, i)
-            self.translated_lines.append(f"  store {field_llvm_type} {expr_value}, {field_llvm_type}* {field_ptr}")
+            
+            # Check if we're copying a struct (type is string, not DataType)
+            if isinstance(expr_type, str):
+                # Struct-to-struct: copy field-by-field
+                self.__copy_struct_fields(field_data_type, expr_value, field_ptr)
+            else:
+                # Primitive type: convert if needed and store directly
+                expr_value = self.__convert_type_if_needed(expr_value, expr_type, field_data_type)
+                self.translated_lines.append(f"  store {field_llvm_type} {expr_value}, {field_llvm_type}* {field_ptr}")
 
     def __get_struct_field_ptr(self, struct_name: str, struct_ptr: str, field_index: int) -> str:
         field_ptr = self.__get_temp_register()
@@ -215,6 +220,9 @@ define void @printResult(i32 %val) {
                         field_data_type) else field_data_type
 
     def visit_function_declaration(self, node: FunctionDeclNode):
+        # Store function return type for later lookups
+        self.function_return_types[node.variable] = node.return_type
+        
         saved_state = self.__save_state()
         self.__reset_function_state()
 
@@ -277,7 +285,16 @@ define void @printResult(i32 %val) {
     def visit_function_call(self, node: FunctionCallNode):
         args = [self.__build_call_argument(arg) for arg in node.arguments]
         result_reg = self.__get_temp_register()
-        self.translated_lines.append(f"  {result_reg} = call ? @{node.value}({', '.join(args)})")
+        
+        # Get the return type from context (we need to look it up from function info)
+        # For now, we'll determine it from the node type
+        return_type = self.__get_node_type(node)
+        if isinstance(return_type, DataType):
+            return_llvm_type = return_type.to_llvm()
+        else:
+            return_llvm_type = f"%struct.{return_type}*"
+        
+        self.translated_lines.append(f"  {result_reg} = call {return_llvm_type} @{node.value}({', '.join(args)})")
         return result_reg
 
     def __build_call_argument(self, arg) -> str:
@@ -481,7 +498,11 @@ define void @printResult(i32 %val) {
         if isinstance(node, StructFieldNode):
             return self.__get_struct_field_type(node)
         if isinstance(node, FunctionCallNode):
-            return DataType.I32
+            # Look up the function's return type
+            func_return_type = self.function_return_types.get(node.value, "i32")
+            if DataType.is_data_type(func_return_type):
+                return DataType.from_string(func_return_type)
+            return func_return_type  # It's a struct type
         return DataType.I32
 
     def __get_struct_field_type(self, node: StructFieldNode):

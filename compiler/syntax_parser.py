@@ -1,31 +1,32 @@
 #!/usr/bin/env python3
 from typing import Union, Optional
 
-from .node.assign_node import AssignNode
-from .node.binary_op_node import BinaryOpNode
-from .node.code_block_node import CodeBlockNode
-from .node.decl_node import DeclNode
-from .node.expr_node import ExprNode
-from .node.factor_node import FactorNode
-from .node.function_decl_node import FunctionDeclNode, FunctionParam
-from .node.function_call_node import FunctionCallNode
-from .node.id_node import IDNode
-from .node.if_node import IfNode
-from .node.number_node import NumberNode
-from .node.program_node import ProgramNode
-from .node.return_node import ReturnNode
-from .node.stmt_node import StmtNode
-from .llvm_specifics.data_type import DataType
-from .llvm_specifics.operator import Operator
-from .node.bool_node import BooleanNode
-from .node.struct_decl_node import StructDeclNode, StructField
-from .node.struct_field_assign_node import StructFieldAssignNode
-from .node.struct_field_node import StructFieldNode
-from .node.struct_init_node import StructInitNode
-from .node.unary_op_node import UnaryOpNode
-from .token.token_type import TokenType
-from .token.token_class import Token
-from .constants import NOT
+from compiler.node.assign_node import AssignNode
+from compiler.node.binary_op_node import BinaryOpNode
+from compiler.node.code_block_node import CodeBlockNode
+from compiler.node.decl_node import DeclNode
+from compiler.node.expr_node import ExprNode
+from compiler.node.factor_node import FactorNode
+from compiler.node.function_decl_node import FunctionDeclNode, FunctionParam
+from compiler.node.function_call_node import FunctionCallNode
+from compiler.node.id_node import IDNode
+from compiler.node.if_node import IfNode
+from compiler.node.number_node import NumberNode
+from compiler.node.program_node import ProgramNode
+from compiler.node.return_node import ReturnNode
+from compiler.node.stmt_node import StmtNode
+from compiler.llvm_specifics.data_type import DataType
+from compiler.llvm_specifics.operator import Operator
+from compiler.node.bool_node import BooleanNode
+from compiler.helpers.struct_field import StructField
+from compiler.node.struct_decl_node import StructDeclNode
+from compiler.node.struct_field_assign_node import StructFieldAssignNode
+from compiler.node.struct_field_node import StructFieldNode
+from compiler.node.struct_init_node import StructInitNode
+from compiler.node.unary_op_node import UnaryOpNode
+from compiler.token.token_type import TokenType
+from compiler.token.token_class import Token
+from compiler.constants import NOT
 
 class SyntaxParser:
     def __init__(self, tokens: list[Token]):
@@ -148,7 +149,12 @@ class SyntaxParser:
         var_type = self.__parse_type()
         can_mutate = self.__parse_mutability()
         token_variable = self.__expect_token(TokenType.VARIABLE)
-        init_expr = self.__parse_initializer()
+        
+        # Check if this is a struct type initialization (multiple values in braces)
+        if var_type in self.declared_structs:
+            init_expr = self.__parse_struct_initialization(var_type, token_variable.line)
+        else:
+            init_expr = self.__parse_initializer()
 
         data_type = DataType.from_string(var_type) if var_type in ["i32", "i64", "bool"] else var_type
         return DeclNode(token_variable.value, init_expr, token_variable.line, can_mutate, data_type)
@@ -190,13 +196,8 @@ class SyntaxParser:
 
             while self.__peek() and self.__peek().token_type == TokenType.COMMA:
                 self.__expect_token(TokenType.COMMA)
-
-                if self.__peek() and self.__peek().token_type in [TokenType.COMMA, TokenType.RIGHT_BRACKET]:
-                    raise ValueError(f"I expected expression after comma at line {self.__peek().line}!")
                 init_exprs.append(self.__parse_expression())
 
-
-        print("AAAAAAAAAAAA")
         self.__expect_token(TokenType.RIGHT_BRACKET)
         return StructInitNode(struct_type, init_exprs, line)
 
