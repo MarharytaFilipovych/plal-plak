@@ -5,6 +5,14 @@ I32_MIN = -2147483648
 I32_MAX = 2147483647
 
 NOT = '!'
+EQUALS = '=='
+MINUS = '-'
+NOT_EQUALS = '!='
+ASSIGNMENT = '='
+COMMA = ','
+DOT = '.'
+ARROW = '->'
+COMMENT_PART= "/"
 WHITESPACE = ' \t\r'
 OPERATORS = '+-*='
 
@@ -29,6 +37,6 @@ PREDEFINED_CHARS: dict = {
     '*': TokenType.MULTIPLY,
     ',': TokenType.COMMA,
     '.': TokenType.DOT,
-    '(': TokenType.LEFT_PAREN,
-    ')': TokenType.RIGHT_PAREN
+    '(': TokenType.LEFT_DUZHKA,
+    ')': TokenType.RIGHT_DUZHKA
 }

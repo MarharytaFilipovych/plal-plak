@@ -25,7 +25,7 @@ from .node.struct_init_node import StructInitNode
 from .node.unary_op_node import UnaryOpNode
 from .token.token_type import TokenType
 from .token.token_class import Token
-
+from .constants import NOT
 
 class SyntaxParser:
     def __init__(self, tokens: list[Token]):
@@ -46,13 +46,11 @@ class SyntaxParser:
     def __expect_token(self, token_type: TokenType) -> Token:
         token = self.__peek()
         if not token:
-            raise ValueError(
-                f"I expected a token of the type {token_type.name} but you decided to abandon this promising code!")
+            raise ValueError(f"I expected a token of the type {token_type.name} but you decided to abandon this promising code!")
 
         if token.token_type != token_type:
-            raise ValueError(
-                f"I expected a token of the type {token_type.name} but you gave me {token.token_type.name} "
-                f"at line {token.line} and index {token.index}")
+            raise ValueError(f"I expected a token of the type {token_type.name} but you gave me '{token.value}' "
+                            f"at line {token.line}!!!")
 
         return self.__eat()
 
@@ -121,9 +119,8 @@ class SyntaxParser:
         elif token.token_type == TokenType.IF:
             return self.__parse_if_statement()
         else:
-            raise ValueError(
-                f"You should have either declared a variable or assign this cutie to sth at line {token.line}, "
-                f"but you decided to use this token type: {token.token_type.name}")
+            raise ValueError(f"You should have either declared a variable or assign this cutie to sth at line {token.line}, "
+                            f"but you decided to use this token type: {token.value}")
 
     def __skip_newlines(self):
         while self.__peek() and self.__peek().token_type == TokenType.NEWLINE:
@@ -135,7 +132,7 @@ class SyntaxParser:
             raise ValueError(
                 f"Each instruction must be on its own line! "
                 f"You were expected to place a newline after the"
-                f" instruction at line {token.line}, but you placed this: {token.token_type.name}")
+                f" instruction at line {token.line}, but you placed this: {token.value}")
         if token and token.token_type == TokenType.NEWLINE:
             self.__eat()
 
@@ -192,11 +189,14 @@ class SyntaxParser:
             init_exprs.append(self.__parse_expression())
 
             while self.__peek() and self.__peek().token_type == TokenType.COMMA:
-                self.__eat()
+                self.__expect_token(TokenType.COMMA)
+
                 if self.__peek() and self.__peek().token_type in [TokenType.COMMA, TokenType.RIGHT_BRACKET]:
                     raise ValueError(f"I expected expression after comma at line {self.__peek().line}!")
                 init_exprs.append(self.__parse_expression())
 
+
+        print("AAAAAAAAAAAA")
         self.__expect_token(TokenType.RIGHT_BRACKET)
         return StructInitNode(struct_type, init_exprs, line)
 
@@ -324,7 +324,7 @@ class SyntaxParser:
         if token and token.token_type == TokenType.NOT:
             self.__eat()
             operand = self.__parse_factor()
-            return UnaryOpNode("!", operand)
+            return UnaryOpNode(NOT, operand)
 
         return self.__parse_primary()
 
@@ -341,7 +341,7 @@ class SyntaxParser:
                 return NumberNode(token.value)
             case TokenType.VARIABLE:
                 self.__eat()
-                if self.__peek() and self.__peek().token_type == TokenType.LEFT_PAREN:
+                if self.__peek() and self.__peek().token_type == TokenType.LEFT_DUZHKA:
                     return self.__parse_function_call(token.value, token.line)
 
                 if self.__is_field_access():
@@ -398,14 +398,14 @@ class SyntaxParser:
         return FunctionCallNode(func_name, arguments, line)
 
     def __parse_parenthesized_list(self, parse_item_fn):
-        self.__expect_token(TokenType.LEFT_PAREN)
+        self.__expect_token(TokenType.LEFT_DUZHKA)
         items = []
 
-        if self.__peek().token_type != TokenType.RIGHT_PAREN:
+        if self.__peek().token_type != TokenType.RIGHT_DUZHKA:
             items.append(parse_item_fn())
             while self.__peek() and self.__peek().token_type == TokenType.COMMA:
                 self.__eat()
                 items.append(parse_item_fn())
 
-        self.__expect_token(TokenType.RIGHT_PAREN)
+        self.__expect_token(TokenType.RIGHT_DUZHKA)
         return items

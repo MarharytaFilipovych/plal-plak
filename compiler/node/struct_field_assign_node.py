@@ -13,4 +13,4 @@ class StructFieldAssignNode(StmtNode):
         self.target = target
 
     def accept(self, visitor: 'ASTVisitor'):
-        visitor.visit_struct_field_assign(self)
+        visitor.visit_struct_field_assignment(self)

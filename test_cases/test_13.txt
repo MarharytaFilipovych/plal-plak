@@ -1,2 +1,2 @@
-i32 x_a1{10}
-return x_a1
+i32 xa1{10}
+return xa1

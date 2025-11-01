@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from .lexer_state import LexerState
-from ..constants import WHITESPACE, OPERATORS, KEYWORDS, PREDEFINED_CHARS
+from ..constants import WHITESPACE, OPERATORS, KEYWORDS, PREDEFINED_CHARS, NOT, ASSIGNMENT, ARROW, EQUALS, NOT_EQUALS, MINUS, COMMENT_PART
 from ..token.token_type import TokenType
 from ..token.token_class import Token
 
@@ -81,39 +81,39 @@ class Lexer:
             self.__move_to_next_char()
             return
 
-        if char == '-':
+        if char == MINUS:
             next_char = self.__check_for_and_get_next_char()
             if next_char == '>':
-                self.__add_token(TokenType.ARROW, '->')
+                self.__add_token(TokenType.ARROW, ARROW)
                 self.__move_to_next_char()
                 self.__move_to_next_char()
                 return
             if next_char and next_char.isdigit():
                 self.__start_new_token(LexerState.NUMBER)
             else:
-                self.__add_token(TokenType.MINUS, '-')
+                self.__add_token(TokenType.MINUS, MINUS)
                 self.__move_to_next_char()
             return
 
-        if char == '=':
+        if char == ASSIGNMENT:
             next_char = self.__check_for_and_get_next_char()
-            if next_char == '=':
-                self.__add_token(TokenType.EQUALS, '==')
+            if next_char == ASSIGNMENT:
+                self.__add_token(TokenType.EQUALS, EQUALS)
                 self.__move_to_next_char()
                 self.__move_to_next_char()
             else:
-                self.__add_token(TokenType.ASSIGNMENT, '=')
+                self.__add_token(TokenType.ASSIGNMENT, ASSIGNMENT)
                 self.__move_to_next_char()
             return
 
-        if char == '!':
+        if char == NOT:
             next_char = self.__check_for_and_get_next_char()
-            if next_char == '=':
-                self.__add_token(TokenType.NOT_EQUALS, '!=')
+            if next_char == ASSIGNMENT:
+                self.__add_token(TokenType.NOT_EQUALS, NOT_EQUALS)
                 self.__move_to_next_char()
                 self.__move_to_next_char()
             else:
-                self.__add_token(TokenType.NOT, "!")
+                self.__add_token(TokenType.NOT, NOT)
                 self.__move_to_next_char()
             return
 
@@ -125,16 +125,14 @@ class Lexer:
             self.__start_new_token(LexerState.NUMBER)
             return
 
-        if char == '/' and self.__check_for_and_get_next_char() == '/':
+        if char == COMMENT_PART and self.__check_for_and_get_next_char() == COMMENT_PART:
             self.state = LexerState.COMMENT
             self.__move_to_next_char()
             self.__move_to_next_char()
             return
 
-        raise ValueError(
-            f"I did not expect character '{char}' to be "
-            f"placed at line {self.line}, column {self.index}!!!"
-        )
+        raise ValueError(f"I did not expect character '{char}' to be "
+            f"placed at line {self.line}, column {self.index}!!!")
 
     def __manage_identifier_state(self, char: str):
         if char.isalnum():
@@ -160,12 +158,11 @@ class Lexer:
         self.__add_token(token_type, value, self.current_token_start_line, self.current_token_start_index)
 
     def __build_number_token(self, value: str):
-        if not value.lstrip('-').isdigit():
+        if not value.lstrip(MINUS).isdigit():
             raise ValueError(
                 f"Do you think that this is a correct number: '{value}'? It is not!!!"
                 f"You placed that awful thing at line {self.current_token_start_line} "
-                f"and column {self.current_token_start_index}."
-            )
+                f"and column {self.current_token_start_index}." )
         self.__add_token(TokenType.NUMBER, value, self.current_token_start_line, self.current_token_start_index)
 
     def __build_current_token(self):
@@ -177,6 +174,3 @@ class Lexer:
                 self.__build_identifier_token(value)
             case LexerState.NUMBER:
                 self.__build_number_token(value)
-
-    def __manage_struct_state(self, value: str):
-        pass

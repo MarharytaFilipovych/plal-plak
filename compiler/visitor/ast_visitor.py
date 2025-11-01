@@ -28,7 +28,7 @@ class ASTVisitor(ABC):
         pass
 
     @abstractmethod
-    def visit_assign(self, node: AssignNode):
+    def visit_assignment(self, node: AssignNode):
         pass
 
     @abstractmethod
@@ -72,7 +72,7 @@ class ASTVisitor(ABC):
         pass
 
     @abstractmethod
-    def visit_struct_field_assign(self, node: StructFieldAssignNode):
+    def visit_struct_field_assignment(self, node: StructFieldAssignNode):
         pass
 
     @abstractmethod

@@ -30,8 +30,8 @@ class TokenType(Enum):
     FN = auto()
     COMMA = auto()
     DOT = auto()
-    LEFT_PAREN = auto()
-    RIGHT_PAREN = auto()
+    LEFT_DUZHKA = auto()
+    RIGHT_DUZHKA = auto()
     ARROW = auto()
 
     @staticmethod

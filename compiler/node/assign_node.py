@@ -7,4 +7,4 @@ if TYPE_CHECKING:
 
 class AssignNode(StmtNode):
     def accept(self, visitor: 'ASTVisitor'):
-        visitor.visit_assign(self)
+        visitor.visit_assignment(self)

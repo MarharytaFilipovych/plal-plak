@@ -123,7 +123,7 @@ class SemanticAnalyzer(ASTVisitor):
 
         return new_type, new_mutable
 
-    def visit_struct_field_assign(self, node: StructFieldAssignNode):
+    def visit_struct_field_assignment(self, node: StructFieldAssignNode):
         field_type = node.target.accept(self)
 
         if not node.target.is_mutable:
@@ -165,7 +165,7 @@ class SemanticAnalyzer(ASTVisitor):
             raise ValueError(f"Types do not match at line {line}: "
                              f"you cannot assign {expr_type} to {expected_type}! Be careful!")
 
-    def visit_assign(self, node: AssignNode):
+    def visit_assignment(self, node: AssignNode):
         self.__check_variable_declared(node.variable, node.line)
         self.__check_variable_mutable(node.variable, node.line)
 
@@ -217,8 +217,7 @@ class SemanticAnalyzer(ASTVisitor):
 
     def visit_id(self, node: IDNode):
         if self.context.currently_initializing == node.value:
-            raise ValueError(
-                f"Self-assignment like '{node.value} = {node.value}' is not allowed at line {node.line}!")
+            raise ValueError(f"Self-assignment like '{node.value} = {node.value}' is not allowed at line {node.line}!")
 
         self.__check_variable_declared(node.value, node.line)
         return self.context.get_variable_type(node.value)

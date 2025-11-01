@@ -8,7 +8,7 @@ from ..node.if_node import IfNode
 from ..node.number_node import NumberNode
 from ..node.bool_node import BooleanNode
 from ..node.binary_op_node import BinaryOpNode
-from ..constants import I32_MAX, I32_MIN
+from ..constants import I32_MAX, I32_MIN, NOT
 from ..node.struct_decl_node import StructDeclNode
 from ..node.struct_init_node import StructInitNode
 from ..node.struct_field_node import StructFieldNode
@@ -189,7 +189,7 @@ define void @printResult(i32 %val) {
                 return i, field_type, fdata
         raise ValueError(f"Field {field_name} not found")
 
-    def visit_struct_field_assign(self, node: StructFieldAssignNode):
+    def visit_struct_field_assignment(self, node: StructFieldAssignNode):
         current_reg = self.__get_current_register(node.target.field_chain[0])
         current_type = self.variable_types[node.target.field_chain[0]]
 
@@ -332,7 +332,7 @@ define void @printResult(i32 %val) {
 
         self.translated_lines.append(f"  {reg} = add {llvm_type} 0, {value}")
 
-    def visit_assign(self, node):
+    def visit_assignment(self, node):
         var_type = self.variable_types[node.variable]
 
         if not isinstance(var_type, DataType):
@@ -546,7 +546,7 @@ define void @printResult(i32 %val) {
         self.variable_types = saved_types
 
     def visit_unary_operation(self, node: UnaryOpNode):
-        if node.operator == "!":
+        if node.operator == NOT:
             operand = node.operand.accept(self)
             temp_reg = self.__get_temp_register()
             self.translated_lines.append(f"  {temp_reg} = xor i1 {operand}, 1")
