@@ -1,7 +1,7 @@
-i32 x{10}
-if true
+fn add = (i32 a, i32 b) -> i32
 {
-    return 5
-    x = 20
+    return a + b
 }
-return 0
+
+i32 c{add(5, add(3, 2))}
+return c

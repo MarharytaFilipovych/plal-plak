@@ -1,5 +1,6 @@
-i32 a{10}
-i64 b{20}
-i64 result{a * b}
-bool isPositive{result != 0}
-return result
+i32 mut x{5}
+if false
+{
+    x = 10
+}
+return x

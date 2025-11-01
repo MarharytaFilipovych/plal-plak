@@ -1,0 +1,7 @@
+fn compute = (i32 x) -> i32
+{
+    i32 y{x + 5}
+}
+
+i32 result{compute(10)}
+return result

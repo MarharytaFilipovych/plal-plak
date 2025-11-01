@@ -1,0 +1,4 @@
+bool flag{true}
+i32 num{5}
+bool result{flag == num}
+return 0

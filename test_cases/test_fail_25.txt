@@ -1,0 +1,2 @@
+i32 result{add(5, 10)}
+return result

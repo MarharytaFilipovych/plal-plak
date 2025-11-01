@@ -1,0 +1,5 @@
+i32 a{5}
+i32 b{10}
+i32 c{15}
+i32 result{a + b * c - a}
+return result

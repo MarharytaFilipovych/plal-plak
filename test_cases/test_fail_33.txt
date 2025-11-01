@@ -1,0 +1,7 @@
+fn getValue = () -> UnknownType
+{
+    return 42
+}
+
+i32 result{getValue()}
+return result

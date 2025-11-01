@@ -4,7 +4,7 @@ mkdir -p llm
 mkdir -p obj
 mkdir -p exe
 
-for i in {1..6} {11..16} {22..31}; do
+for i in {1..40}; do
     echo "Testing test_$i..."
     python3 -m compiler.compiler ./test_cases/test_$i.txt ./llm/test_$i.ll
     if [ $? -ne 0 ]; then
@@ -17,9 +17,9 @@ for i in {1..6} {11..16} {22..31}; do
     echo ""
 done
 
-for i in {7..10} {17..21} {32..36}; do
+for i in {1..40}; do
     echo "Testing test_$i (should fail)..."
-    python3 -m compiler.compiler ./test_cases/test_$i.txt ./llm/test_$i.ll
+    python3 -m compiler.compiler ./test_cases/test_fail_$i.txt ./llm/test_fail_$i.ll
     if [ $? -eq 0 ]; then
         echo "ERROR: test_$i should have failed compilation!"
         exit 1

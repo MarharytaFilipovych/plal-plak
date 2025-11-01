@@ -1,10 +1,8 @@
-i32 mut x{5}
-if x == 5
+struct Point
 {
-    x = 100
+    i32 mut x
+    i32 mut y
 }
-else
-{
-    x = 200
-}
-return x
+
+Point p{10, 20}
+return 42

@@ -1,2 +1,6 @@
-i32 x_a1{10}
-return x_a1
+i32 x{10}
+if x == 10
+{
+    return 999
+}
+return 0

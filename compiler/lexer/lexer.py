@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from .lexer_state import LexerState
-from .lexer_constants import WHITESPACE, OPERATORS, KEYWORDS, PREDEFINED_CHARS
+from ..constants import WHITESPACE, OPERATORS, KEYWORDS, PREDEFINED_CHARS
 from ..token.token_type import TokenType
 from ..token.token_class import Token
 
@@ -83,6 +83,11 @@ class Lexer:
 
         if char == '-':
             next_char = self.__check_for_and_get_next_char()
+            if next_char == '>':
+                self.__add_token(TokenType.ARROW, '->')
+                self.__move_to_next_char()
+                self.__move_to_next_char()
+                return
             if next_char and next_char.isdigit():
                 self.__start_new_token(LexerState.NUMBER)
             else:

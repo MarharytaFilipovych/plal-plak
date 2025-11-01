@@ -1,7 +1,10 @@
-bool flag{false}
-i32 mut result{0}
-if !flag
+struct Point
 {
-    result = 42
+    i32 mut x
+    i32 mut y
 }
+
+Point mut p{10, 20}
+p.x = 15
+i32 result{p.x}
 return result

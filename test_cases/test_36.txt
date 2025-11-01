@@ -1,6 +1,7 @@
-i32 x{10}
-if true
+fn isZero = (i32 x) -> bool
 {
-    x = 20
+    return x == 0
+}
 
-return x
+bool result{isZero(0)}
+return result

@@ -1,0 +1,4 @@
+i32 x{10}
+i32 y{20} i32 z{30}
+bool flag{true}
+return x

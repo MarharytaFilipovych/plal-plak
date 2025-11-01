@@ -1,0 +1,10 @@
+struct Point
+{
+    i32 x
+    i32 y
+}
+
+Point p1{10, 20}
+Point p2{30, 40}
+bool result{p1 == p2}
+return 0

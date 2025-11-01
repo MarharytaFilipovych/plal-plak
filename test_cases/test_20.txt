@@ -1,4 +1,13 @@
-i32 x{10}
-i32 y{20} i32 z{30}
-bool flag = true
+i32 mut x{5}
+if x == 5
+{
+    if true
+    {
+        x = 100
+    }
+    else
+    {
+        x = 50
+    }
+}
 return x

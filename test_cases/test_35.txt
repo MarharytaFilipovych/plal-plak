@@ -1,6 +1,12 @@
-i32 x{10}
-if true
+fn max = (i32 a, i32 b) -> i32
 {
-    i32 y{20}
+    i32 mut result{a}
+    if b == 10
+    {
+        result = b
+    }
+    return result
 }
-return y
+
+i32 answer{max(5, 10)}
+return answer

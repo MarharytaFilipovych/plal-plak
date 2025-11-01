@@ -1,6 +1,8 @@
-i32 x{10}
-if x
+fn double = (i32 x) -> i32
 {
-    return 1
+    i32 result{x * 2}
+    return result
 }
-return 0
+
+i32 num{double(5)}
+return num

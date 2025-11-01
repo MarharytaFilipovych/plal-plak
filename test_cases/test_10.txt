@@ -1,3 +1,5 @@
-i32 x{10}
-y = 15
-return y
+i64 big{5000000000}
+i32 small{100}
+i64 sum{big + small}
+bool isEqual{sum == 5000000100}
+return isEqual

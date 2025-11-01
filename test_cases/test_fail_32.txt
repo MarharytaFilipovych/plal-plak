@@ -1,0 +1,7 @@
+fn process = (UnknownType x) -> i32
+{
+    return 42
+}
+
+i32 result{process(10)}
+return result

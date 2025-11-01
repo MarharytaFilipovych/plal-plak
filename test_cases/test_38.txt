@@ -1,0 +1,14 @@
+fn addOne = (i32 x) -> i32
+{
+    return x + 1
+}
+
+fn addTwo = (i32 x) -> i32
+{
+    return x + 2
+}
+
+i32 a{addOne(5)}
+i32 b{addTwo(5)}
+i32 result{a + b}
+return result

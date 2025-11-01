@@ -1,4 +1,7 @@
-bool flag{true}
-bool other{false}
-i32 result{flag + other}
+bool flag{false}
+i32 mut result{0}
+if !flag
+{
+    result = 42
+}
 return result

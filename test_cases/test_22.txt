@@ -1,6 +1,10 @@
-i32 mut x{5}
-if true
+bool flag{true}
+if flag
 {
-    x = 10
+    return 1
 }
-return x
+else
+{
+    return 0
+}
+return -1

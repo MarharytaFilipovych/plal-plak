@@ -1,0 +1,7 @@
+i32 x{10}
+if true
+{
+    return 5
+    x = 20
+}
+return 0

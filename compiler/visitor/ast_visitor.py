@@ -78,3 +78,11 @@ class ASTVisitor(ABC):
     @abstractmethod
     def visit_struct_field(self, node: StructFieldNode):
         pass
+
+    @abstractmethod
+    def visit_function_declaration(self, self1):
+        pass
+
+    @abstractmethod
+    def visit_function_call(self, self1):
+        pass

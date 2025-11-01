@@ -1,0 +1,12 @@
+fn compute = (i32 x, bool flag) -> i32
+{
+    i32 mut result{x}
+    if flag
+    {
+        result = result + 10
+    }
+    return result
+}
+
+i32 answer{compute(5, true)}
+return answer

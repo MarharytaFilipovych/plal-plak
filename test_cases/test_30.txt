@@ -1,10 +1,10 @@
-bool flag{true}
-if flag
+struct Data
 {
-    return 1
+    i32 mut count
+    i64 mut bigNum
+    bool mut flag
 }
-else
-{
-    return 0
-}
-return -1
+
+Data d{42, 5000000000, true}
+i32 result{d.count}
+return result

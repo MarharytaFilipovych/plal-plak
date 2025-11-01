@@ -30,7 +30,15 @@ class TokenType(Enum):
     FN = auto()
     COMMA = auto()
     DOT = auto()
+    LEFT_PAREN = auto()
+    RIGHT_PAREN = auto()
+    ARROW = auto()
 
     @staticmethod
     def is_data_type(token_type: 'TokenType') -> bool:
-        return token_type in {TokenType.I32_TYPE, TokenType.I64_TYPE, TokenType.BOOL}
+        return token_type in [TokenType.I32_TYPE, TokenType.I64_TYPE, TokenType.BOOL]
+
+    @staticmethod
+    def is_operator(token_type: 'TokenType') -> bool:
+        return token_type in [TokenType.PLUS, TokenType.MINUS, TokenType.MULTIPLY,
+                              TokenType.EQUALS, TokenType.NOT_EQUALS]

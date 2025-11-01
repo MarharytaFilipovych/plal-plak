@@ -1,0 +1,15 @@
+struct Circle
+{
+    Point center
+    i32 radius
+}
+
+struct Point
+{
+    i32 x
+    i32 y
+}
+
+Point p{10, 20}
+Circle c{p, 5}
+return 0

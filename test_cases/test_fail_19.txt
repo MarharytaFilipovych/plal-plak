@@ -1,0 +1,8 @@
+struct Point
+{
+    i32 x
+    i32 y
+}
+
+Point p{true, 20}
+return 0

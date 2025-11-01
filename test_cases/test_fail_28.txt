@@ -1,0 +1,7 @@
+fn getValue = () -> i32
+{
+    return true
+}
+
+i32 x{getValue()}
+return x

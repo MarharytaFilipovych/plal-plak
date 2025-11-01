@@ -1,13 +1,16 @@
-i32 mut x{5}
-if x == 5
+struct Point
 {
-    if true
-    {
-        x = 100
-    }
-    else
-    {
-        x = 50
-    }
+    i32 mut x
+    i32 mut y
 }
-return x
+
+struct Circle
+{
+    Point center
+    i32 mut radius
+}
+
+Point p{10, 20}
+Circle c{p, 5}
+i32 coord{c.center.x}
+return coord

@@ -1,4 +1,10 @@
-i32 small{100}
-i64 large{100}
-bool areEqual{small == large}
-return areEqual
+i32 mut x{5}
+if x == 5
+{
+    x = 100
+}
+else
+{
+    x = 200
+}
+return x

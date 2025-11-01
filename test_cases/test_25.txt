@@ -1,7 +1,9 @@
-bool a{true}
-bool b{!a}
-if b
+struct Point
 {
-    return 0
+    i32 mut x
+    i32 mut y
 }
-return 1
+
+Point p{10, 20}
+i32 xCoord{p.x}
+return xCoord
