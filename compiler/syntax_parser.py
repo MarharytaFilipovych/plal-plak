@@ -355,7 +355,8 @@ class SyntaxParser:
 
                     if self.__is_function_call():
                         func_name = field_chain[-1]
-                        return self.__parse_function_call(func_name, token.line, field_chain)
+                        object_chain = field_chain[:-1]
+                        return self.__parse_function_call(func_name, token.line, object_chain)
 
                     return StructFieldNode(FieldChain(field_chain), token.line)
 
