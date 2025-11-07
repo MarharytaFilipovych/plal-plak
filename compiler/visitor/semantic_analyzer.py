@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
-from ..constants import I32_MAX, I32_MIN
+from typing import Optional
+
+from ..constants import I32_MAX, I32_MIN, GLOBAL_SCOPE
 from .ast_visitor import ASTVisitor
 from compiler.context.context import Context
+from ..helpers.field_chain import FieldChain
 from ..llvm_specifics.data_type import DataType
 from ..node.assign_node import AssignNode
 from ..node.binary_op_node import BinaryOpNode
@@ -44,6 +47,13 @@ class SemanticAnalyzer(ASTVisitor):
         self.__check_duplicate_fields(node)
         self.__validate_field_types(node)
         self.context.define_struct(node.variable, node.fields)
+        self.__register_member_functions(node.variable, node.member_functions)
+
+    def __register_member_functions(self, struct_name: str, member_functions):
+        for member_function in member_functions:
+            param_types = [p.param_type for p in member_function.params]
+            self.context.define_function(struct_name, member_function.variable,
+                                         param_types, member_function.return_type)
 
     @staticmethod
     def __check_duplicate_fields(node: StructDeclNode):
@@ -98,9 +108,9 @@ class SemanticAnalyzer(ASTVisitor):
         current_type = self.context.get_variable_type(node.value)
         base_mutable = self.context.is_variable_mutable(node.value)
 
-        for i in range(1, len(node.field_chain)):
+        for i in range(1, len(node.field_chain.fields)):
             current_type, base_mutable = self.__traverse_field_chain(
-                node.field_chain[i], current_type, base_mutable, node.line)
+                node.field_chain.fields[i], current_type, base_mutable, node.line)
 
         node.is_mutable = base_mutable
         return current_type
@@ -127,8 +137,7 @@ class SemanticAnalyzer(ASTVisitor):
         field_type = node.target.accept(self)
 
         if not node.target.is_mutable:
-            field_path = '.'.join(node.target.field_chain)
-            raise ValueError(f"Cannot assign to immutable field '{field_path}' at line {node.line}! "
+            raise ValueError(f"Cannot assign to immutable field '{node.target.field_chain}' at line {node.line}! "
                              f"Either the base object or a field in the chain is not mutable.")
 
         expr_type = node.expr_node.accept(self)
@@ -256,9 +265,9 @@ class SemanticAnalyzer(ASTVisitor):
             return DataType.BOOL
         raise ValueError(f"Unknown unary operator: {node.operator}")
 
-    def __register_function(self, node: FunctionDeclNode):
+    def __register_function(self, scope: str, node: FunctionDeclNode):
         param_types = [p.param_type for p in node.params]
-        self.context.define_function(node.variable, param_types, node.return_type)
+        self.context.define_function(scope, node.variable, param_types, node.return_type)
 
     def visit_function_declaration(self, node: FunctionDeclNode):
         self.context.enter_scope()
@@ -269,7 +278,6 @@ class SemanticAnalyzer(ASTVisitor):
 
     def __declare_function_parameters(self, node: FunctionDeclNode):
         for param in node.params:
-            # Resolve the parameter type to DataType if it's a primitive type
             param_type = self.__resolve_type(param.param_type)
             if not self.context.declare_variable(param.name, param_type, mutable=False):
                 raise ValueError(f"Duplicate parameter '{param.name}' in function '{node.variable}'!")
@@ -285,10 +293,11 @@ class SemanticAnalyzer(ASTVisitor):
             raise ValueError(f"Function '{node.variable}' returns {returned_type} but declared as {expected_type}!")
 
     def visit_function_call(self, node: FunctionCallNode):
-        if not self.context.is_function_defined(node.value):
+        function_scope = self.__identify_function_scope(node.field_chain)
+        if not self.context.is_function_defined(function_scope, node.value):
             raise ValueError(f"Function '{node.value}' not defined at line {node.line}!")
 
-        func_info = self.context.get_function_info(node.value)
+        func_info = self.context.get_function_info(function_scope, node.value)
         self.__validate_argument_count(node, func_info)
         self.__validate_argument_types(node, func_info)
 
@@ -321,3 +330,19 @@ class SemanticAnalyzer(ASTVisitor):
     @staticmethod
     def __is_type_compatible(source_type: DataType, target_type: DataType) -> bool:
         return source_type == target_type or (source_type == DataType.I32 and target_type == DataType.I64)
+
+    def __identify_function_scope(self, chain: Optional[FieldChain]) -> str:
+        return self.context.get_variable_type(chain.fields[-1]) if chain else GLOBAL_SCOPE
+
+    def __analyze_member_function(self, struct_name: str, node: FunctionDeclNode):
+        self.context.enter_scope()
+
+        struct_fields = self.context.get_struct_definition(struct_name)
+        for field in struct_fields:
+            field_type = self.__resolve_type(field.data_type)
+            self.context.declare_variable(field.variable, field_type, field.mutable)
+
+        self.__declare_function_parameters(node)
+        node.body.accept(self)
+        self.__validate_function_return(node)
+        self.context.exit_scope()

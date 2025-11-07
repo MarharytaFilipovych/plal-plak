@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from typing import Optional
 
+from .function_table import FunctionTable
 from ..context.function_info import FunctionInfo
 from ..llvm_specifics.data_type import DataType
 from ..context.variable_info import VariableInfo
@@ -12,7 +13,7 @@ class Context:
         self.scopes: list[dict[str, VariableInfo]] = [{}]
         self.currently_initializing: Optional[str] = None
         self.struct_definitions: dict[str, list[StructField]] = {}
-        self.functions: dict[str, FunctionInfo] = {}
+        self.functions: FunctionTable = FunctionTable()
 
     def enter_scope(self):
         self.scopes.append({})
@@ -58,11 +59,11 @@ class Context:
     def get_struct_definition(self, struct_name: str) -> list[StructField]:
         return [] if struct_name not in self.struct_definitions else self.struct_definitions[struct_name]
 
-    def define_function(self, name: str, param_types: list[str], return_type: str):
-        self.functions[name] = FunctionInfo(param_types, return_type)
+    def define_function(self, scope: str, name: str, param_types: list[str], return_type: str):
+        self.functions.add_function(scope, name, FunctionInfo(param_types, return_type))
 
-    def is_function_defined(self, name: str) -> bool:
-        return name in self.functions
+    def is_function_defined(self, scope: str, name: str) -> bool:
+        return self.functions.scope_has_function(scope, name)
 
-    def get_function_info(self, name: str) -> FunctionInfo:
-        return self.functions.get(name)
+    def get_function_info(self, scope: str, name: str) -> FunctionInfo:
+        return self.functions.get_function_info(scope, name)

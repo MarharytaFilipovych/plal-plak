@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from typing import Union, Optional
 
+from compiler.helpers.field_chain import FieldChain
 from compiler.node.assign_node import AssignNode
 from compiler.node.binary_op_node import BinaryOpNode
 from compiler.node.code_block_node import CodeBlockNode
@@ -150,7 +151,6 @@ class SyntaxParser:
         can_mutate = self.__parse_mutability()
         token_variable = self.__expect_token(TokenType.VARIABLE)
         
-        # Check if this is a struct type initialization (multiple values in braces)
         if var_type in self.declared_structs:
             init_expr = self.__parse_struct_initialization(var_type, token_variable.line)
         else:
@@ -173,19 +173,27 @@ class SyntaxParser:
         self.__consume_newline_and_skip()
 
         fields = self.__parse_struct_fields()
+        member_functions = self.__parse_member_functions()
 
         self.__expect_token(TokenType.RIGHT_BRACKET)
-        return StructDeclNode(struct_name, fields, struct_token.line)
+        return StructDeclNode(struct_name, fields, member_functions, struct_token.line)
 
     def __parse_struct_fields(self) -> list[StructField]:
         fields: list[StructField] = []
-        while self.__peek() and self.__peek().token_type != TokenType.RIGHT_BRACKET:
+        while self.__peek() and self.__peek().token_type not in [TokenType.RIGHT_BRACKET, TokenType.FN]:
             var_type = self.__parse_type()
             can_mutate = self.__parse_mutability()
             token_variable = self.__expect_token(TokenType.VARIABLE)
             fields.append(StructField(var_type, token_variable.value, can_mutate))
             self.__consume_newline_and_skip()
         return fields
+
+    def __parse_member_functions(self) -> list[FunctionDeclNode]:
+        member_functions = []
+        while self.__peek() and self.__peek().token_type == TokenType.FN:
+            member_functions.append(self.__parse_function_declaration())
+            self.__consume_newline_and_skip()
+        return member_functions
 
     def __parse_struct_initialization(self, struct_type: str, line: int) -> StructInitNode:
         self.__expect_token(TokenType.LEFT_BRACKET)
@@ -231,7 +239,7 @@ class SyntaxParser:
         value_expr = self.__parse_expression()
 
         return (
-            StructFieldAssignNode(StructFieldNode(field_chain, variable_token.line), value_expr, variable_token.line)
+            StructFieldAssignNode(StructFieldNode(FieldChain(field_chain), variable_token.line), value_expr, variable_token.line)
             if field_chain else AssignNode(variable_token.value, value_expr, variable_token.line))
 
     def __parse_if_statement(self) -> IfNode:
@@ -342,11 +350,17 @@ class SyntaxParser:
                 return NumberNode(token.value)
             case TokenType.VARIABLE:
                 self.__eat()
-                if self.__peek() and self.__peek().token_type == TokenType.LEFT_DUZHKA:
-                    return self.__parse_function_call(token.value, token.line)
-
                 if self.__is_field_access():
-                    return StructFieldNode(self.__gather_field_accessors(token.value), token.line)
+                    field_chain = self.__gather_field_accessors(token.value)
+
+                    if self.__is_function_call():
+                        func_name = field_chain[-1]
+                        return self.__parse_function_call(func_name, token.line, field_chain)
+
+                    return StructFieldNode(FieldChain(field_chain), token.line)
+
+                if self.__is_function_call():
+                    return self.__parse_function_call(token.value, token.line)
 
                 if self.__is_struct_initialization(token.value):
                     return self.__parse_struct_initialization(token.value, token.line)
@@ -364,6 +378,9 @@ class SyntaxParser:
 
     def __is_field_access(self) -> bool:
         return self.__peek() and self.__peek().token_type == TokenType.DOT
+
+    def __is_function_call(self) -> bool:
+        return self.__peek() and self.__peek().token_type == TokenType.LEFT_DUZHKA
 
     def __gather_field_accessors(self, base_variable: str) -> list[str]:
         field_chain = [base_variable]
@@ -394,9 +411,10 @@ class SyntaxParser:
         param_name = self.__expect_token(TokenType.VARIABLE).value
         return FunctionParam(param_type, param_name)
 
-    def __parse_function_call(self, func_name: str, line: int) -> FunctionCallNode:
+    def __parse_function_call(self, func_name: str, line: int,
+                              field_chain: Optional[list[str]] = None) -> FunctionCallNode:
         arguments = self.__parse_parenthesized_list(self.__parse_expression)
-        return FunctionCallNode(func_name, arguments, line)
+        return FunctionCallNode(func_name, arguments, line, field_chain)
 
     def __parse_parenthesized_list(self, parse_item_fn):
         self.__expect_token(TokenType.LEFT_DUZHKA)

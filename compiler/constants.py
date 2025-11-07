@@ -4,6 +4,8 @@ from .token.token_type import TokenType
 I32_MIN = -2147483648
 I32_MAX = 2147483647
 
+GLOBAL_SCOPE = "global"
+
 NOT = '!'
 EQUALS = '=='
 MINUS = '-'

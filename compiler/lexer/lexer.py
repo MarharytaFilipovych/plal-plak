@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from .lexer_state import LexerState
-from ..constants import WHITESPACE, OPERATORS, KEYWORDS, PREDEFINED_CHARS, NOT, ASSIGNMENT, ARROW, EQUALS, NOT_EQUALS, MINUS, COMMENT_PART
+from ..constants import WHITESPACE, OPERATORS, KEYWORDS, PREDEFINED_CHARS, NOT, ASSIGNMENT, ARROW, EQUALS, NOT_EQUALS, \
+    MINUS, COMMENT_PART
 from ..token.token_type import TokenType
 from ..token.token_class import Token
 
@@ -132,7 +133,7 @@ class Lexer:
             return
 
         raise ValueError(f"I did not expect character '{char}' to be "
-            f"placed at line {self.line}, column {self.index}!!!")
+                         f"placed at line {self.line}, column {self.index}!!!")
 
     def __manage_identifier_state(self, char: str):
         if char.isalnum():
@@ -162,7 +163,7 @@ class Lexer:
             raise ValueError(
                 f"Do you think that this is a correct number: '{value}'? It is not!!!"
                 f"You placed that awful thing at line {self.current_token_start_line} "
-                f"and column {self.current_token_start_index}." )
+                f"and column {self.current_token_start_index}.")
         self.__add_token(TokenType.NUMBER, value, self.current_token_start_line, self.current_token_start_index)
 
     def __build_current_token(self):

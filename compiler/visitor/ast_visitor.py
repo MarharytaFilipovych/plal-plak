@@ -6,6 +6,8 @@ from ..node.binary_op_node import BinaryOpNode
 from ..node.bool_node import BooleanNode
 from ..node.code_block_node import CodeBlockNode
 from ..node.decl_node import DeclNode
+from ..node.function_call_node import FunctionCallNode
+from ..node.function_decl_node import FunctionDeclNode
 from ..node.struct_field_assign_node import StructFieldAssignNode
 from ..node.struct_field_node import StructFieldNode
 from ..node.struct_init_node import StructInitNode
@@ -15,6 +17,7 @@ from ..node.number_node import NumberNode
 from ..node.program_node import ProgramNode
 from ..node.return_node import ReturnNode
 from ..node.struct_decl_node import StructDeclNode
+from ..node.struct_member_function_call_node import StructMemberFunctionCallNode
 from ..node.unary_op_node import UnaryOpNode
 
 
@@ -80,9 +83,9 @@ class ASTVisitor(ABC):
         pass
 
     @abstractmethod
-    def visit_function_declaration(self, self1):
+    def visit_function_declaration(self, node: FunctionDeclNode):
         pass
 
     @abstractmethod
-    def visit_function_call(self, self1):
+    def visit_function_call(self, node: FunctionCallNode):
         pass
