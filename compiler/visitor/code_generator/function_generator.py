@@ -39,7 +39,7 @@ class FunctionGenerator:
         result_reg = self.emitter.get_temp_register()
         return_type = self.type_converter.get_node_type(node)
 
-        return_llvm_type = self.__get_function_return_llvm_type(return_type)
+        return_llvm_type = FunctionGenerator.__get_llvm_type(return_type)
         self.emitter.emit_line(f"  {result_reg} = call {return_llvm_type} @{node.value}({', '.join(args)})")
         return result_reg
 
@@ -54,7 +54,7 @@ class FunctionGenerator:
 
         result_reg = self.emitter.get_temp_register()
         return_type = self.type_converter.get_node_type(node)
-        return_llvm_type = self.__get_function_return_llvm_type(return_type)
+        return_llvm_type = FunctionGenerator.__get_llvm_type(return_type)
 
         self.emitter.emit_line(f"  {result_reg} = call {return_llvm_type} @{mangled_name}({', '.join(arg_strs)})")
         return result_reg
@@ -70,7 +70,7 @@ class FunctionGenerator:
         self.emitter.emit_line(f"  store {field_llvm_type} {value}, {field_llvm_type}* {field_ptr}")
 
     @staticmethod
-    def get_llvm_type(data_type) -> str:
+    def __get_llvm_type(data_type) -> str:
         return (data_type.to_llvm()
                 if isinstance(data_type, DataType)
                 else f"%struct.{data_type}*")
@@ -99,17 +99,18 @@ class FunctionGenerator:
 
     def __build_function_signature(self, node) -> str:
         param_strs = [self.__build_param_string(p) for p in node.params]
-        return_llvm_type = self.__get_return_type_for_signature(node.return_type)
+        return_llvm_type = FunctionGenerator.__get_llvm_type(node.return_type)
         return f"define {return_llvm_type} @{node.variable}({', '.join(param_strs)}) {{"
 
     def __build_member_function_signature(self, struct_name: str, node, mangled_name: str) -> str:
-        return_llvm_type = self.__get_llvm_type(node.return_type)
+        return_llvm_type = FunctionGenerator.__get_llvm_type(node.return_type)
         param_strs = [f"%struct.{struct_name}* %this"] + [
             self.__build_param_string(p) for p in node.params]
         return f"define {return_llvm_type} @{mangled_name}({', '.join(param_strs)}) {{"
 
-    def __build_param_string(self, param) -> str:
-        llvm_type = self.__get_llvm_type(param.param_type)
+    @staticmethod
+    def __build_param_string(param) -> str:
+        llvm_type = FunctionGenerator.__get_llvm_type(param.param_type)
         return f"{llvm_type} %{param.name}"
 
     def __declare_function_params(self, node):
@@ -128,22 +129,22 @@ class FunctionGenerator:
         self.current_struct_context = struct_name
         for field_name, field_llvm_type, field_data_type in self.struct_ops.struct_definitions[struct_name]:
             field_type = (DataType.from_string(field_data_type)
-                            if DataType.is_data_type(field_data_type)
-                            else field_data_type)
+                          if DataType.is_data_type(field_data_type)
+                          else field_data_type)
             self.variable_registry.set_variable_type(field_name, field_type)
             self.variable_registry.set_variable_version(field_name, -1)
 
     def __build_call_argument(self, arg, visitor) -> str:
         arg_value = arg.accept(visitor)
         arg_type = self.type_converter.get_node_type(arg)
-        arg_llvm_type = self.get_llvm_type(arg_type)
+        arg_llvm_type = FunctionGenerator.__get_llvm_type(arg_type)
         return f"{arg_llvm_type} {arg_value}"
 
     def __save_state(self) -> dict:
         return {
             "emitter": self.emitter.copy_state(),
             "variable_registry": self.variable_registry.copy_state(),
-            "in_function": self.in_function,}
+            "in_function": self.in_function}
 
     def __restore_state(self, state: dict):
         self.emitter.restore_state(state["emitter"])
