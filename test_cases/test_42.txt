@@ -1,0 +1,14 @@
+struct Calculator
+{
+    i32 mut result
+
+    fn add = (i32 x, i32 y) -> i32
+    {
+        result = x + y
+        return result
+    }
+}
+
+Calculator mut calc{0}
+i32 answer{calc.add(10, 20)}
+return answer

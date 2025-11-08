@@ -2,3 +2,7 @@ Links to claude.ai:
 * https://claude.ai/share/6cb4db48-d528-4e92-912e-3200e1059d6a
 -----
 * https://claude.ai/share/22fe88ec-a1ad-4542-aedc-571ff6c7c99b
+-----
+* https://www.geeksforgeeks.org/python/python-dictionary/
+* https://www.geeksforgeeks.org/python/python-tuples/
+*

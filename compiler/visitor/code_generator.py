@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+from dataclasses import dataclass
+from typing import Union, List, Dict
+from contextlib import contextmanager
+
 from ..llvm_specifics.boolean import Boolean
 from ..llvm_specifics.data_type import DataType
 from .ast_visitor import ASTVisitor
@@ -16,26 +20,52 @@ from ..node.struct_field_assign_node import StructFieldAssignNode
 from ..node.function_decl_node import FunctionDeclNode
 from ..node.function_call_node import FunctionCallNode
 from ..node.unary_op_node import UnaryOpNode
-from typing import Union
+
+
+@dataclass
+class CodeGenMemento:
+    translated_lines: List[str]
+    variable_versions: Dict[str, int]
+    variable_types: Dict[str, Union[DataType, str]]
+    temp_counter: int
+    label_counter: int
+    in_function: bool
+    
+    @staticmethod
+    def capture(generator: 'CodeGenerator') -> 'CodeGenMemento':
+        return CodeGenMemento(
+            translated_lines=generator.translated_lines,
+            variable_versions=generator.variable_versions.copy(),
+            variable_types=generator.variable_types.copy(),
+            temp_counter=generator.temp_counter,
+            label_counter=generator.label_counter,
+            in_function=generator.in_function
+        )
+    
+    def restore_to(self, generator: 'CodeGenerator') -> None:
+        generator.translated_lines = self.translated_lines
+        generator.variable_versions = self.variable_versions
+        generator.variable_types = self.variable_types
+        generator.temp_counter = self.temp_counter
+        generator.label_counter = self.label_counter
+        generator.in_function = self.in_function
 
 
 class CodeGenerator(ASTVisitor):
 
     def __init__(self):
-        self.variable_versions: dict[str, int] = {}
-        self.variable_types: dict[str, Union[DataType, str]] = {}
-        self.translated_lines: list[str] = []
+        self.variable_versions: Dict[str, int] = {}
+        self.variable_types: Dict[str, Union[DataType, str]] = {}
+        self.translated_lines: List[str] = []
         self.temp_counter = 0
         self.label_counter = 0
-        self.max_versions: dict[str, int] = {}
+        self.max_versions: Dict[str, int] = {}
 
-        self.struct_definitions: dict[str, list] = {}
-        self.struct_type_lines: list[str] = []
-        self.function_definitions: list[str] = []
-        self.function_return_types: dict[str, str] = {}
+        self.struct_definitions: Dict[str, list] = {}
+        self.struct_type_lines: List[str] = []
+        self.function_definitions: List[str] = []
+        self.function_return_types: Dict[str, str] = {}
         self.in_function: bool = False
-        self.current_struct_context = None
-        self.this_pointer = None
 
     @staticmethod
     def get_print_function_llvm() -> str:
@@ -50,6 +80,22 @@ define void @printResult(i32 %val) {
 }
 
 """
+
+    @contextmanager
+    def function_context(self):
+        saved_state = CodeGenMemento.capture(self)
+        
+        self.translated_lines = []
+        self.variable_versions = {}
+        self.variable_types = {}
+        self.temp_counter = 0
+        self.label_counter = 0
+        self.in_function = True
+        
+        try:
+            yield
+        finally:
+            saved_state.restore_to(self)
 
     def visit_program(self, node):
         self.__reset_state()
@@ -97,9 +143,6 @@ define void @printResult(i32 %val) {
         struct_def = f"%struct.{node.variable} = type {{ {', '.join(field_types)} }}"
         self.struct_type_lines.append(struct_def)
 
-        for member_func in node.member_functions:
-            self.__generate_member_function(node.variable, member_func)
-
     def __build_struct_fields(self, node: StructDeclNode) -> list:
         fields = []
         for field in node.fields:
@@ -129,9 +172,9 @@ define void @printResult(i32 %val) {
         for i, (field_name, field_llvm_type, field_data_type) in enumerate(fields):
             expr_value = node.init_expressions[i].accept(self)
             expr_type = self.__get_node_type(node.init_expressions[i])
-
+            
             field_ptr = self.__get_struct_field_ptr(node.struct_type, struct_reg, i)
-
+            
             if isinstance(expr_type, str):
                 self.__copy_struct_fields(field_data_type, expr_value, field_ptr)
             else:
@@ -157,15 +200,15 @@ define void @printResult(i32 %val) {
         return temp_reg
 
     def visit_struct_field(self, node: StructFieldNode):
-        current_reg = self.__get_current_register(node.field_chain.fields[0])
-        current_type = self.variable_types[node.field_chain.fields[0]]
+        current_reg = self.__get_current_register(node.field_chain[0])
+        current_type = self.variable_types[node.field_chain[0]]
 
-        for i in range(1, len(node.field_chain.fields)):
+        for i in range(1, len(node.field_chain)):
             current_reg, current_type = self.__access_field(
-                node.field_chain.fields[i],
+                node.field_chain[i],
                 current_type,
                 current_reg,
-                is_final=(i == len(node.field_chain.fields) - 1))
+                is_final=(i == len(node.field_chain) - 1))
 
         return current_reg
 
@@ -197,17 +240,16 @@ define void @printResult(i32 %val) {
         raise ValueError(f"Field {field_name} not found")
 
     def visit_struct_field_assignment(self, node: StructFieldAssignNode):
-        current_reg = self.__get_current_register(node.target.field_chain.fields[0])
-        current_type = self.variable_types[node.target.field_chain.fields[0]]
+        current_reg = self.__get_current_register(node.target.field_chain[0])
+        current_type = self.variable_types[node.target.field_chain[0]]
 
-        for i in range(1, len(node.target.field_chain.fields)):
-            is_final = (i == len(node.target.field_chain.fields) - 1)
+        for i in range(1, len(node.target.field_chain)):
+            is_final = (i == len(node.target.field_chain) - 1)
 
             if isinstance(current_type, str):
                 struct_name = current_type
                 fields = self.struct_definitions[struct_name]
-                field_index, field_llvm_type, field_data_type = self.__find_field(fields,
-                                                                                  node.target.field_chain.fields[i])
+                field_index, field_llvm_type, field_data_type = self.__find_field(fields, node.target.field_chain[i])
 
                 field_ptr = self.__get_struct_field_ptr(struct_name, current_reg, field_index)
 
@@ -222,127 +264,14 @@ define void @printResult(i32 %val) {
                     current_type = DataType.from_string(field_data_type) if DataType.is_data_type(
                         field_data_type) else field_data_type
 
-    def __generate_member_function(self, struct_name: str, node: FunctionDeclNode):
-        mangled_name = f"{struct_name}_{node.variable}"
-        self.function_return_types[mangled_name] = node.return_type
-
-        saved_state = self.__save_state()
-        self.__reset_function_state()
-
-        func_signature = self.__build_member_function_signature(struct_name, node)
-        self.__declare_this_pointer(struct_name)
-        self.__declare_function_params(node)
-
-        node.body.accept(self)
-
-        self.__store_function_definition(func_signature)
-        self.__restore_state(saved_state)
-
-    def __build_member_function_signature(self, struct_name: str, node: FunctionDeclNode) -> str:
-        mangled_name = f"{struct_name}_{node.variable}"
-        this_param = f"%struct.{struct_name}* %this"
-        param_strs = [self.__build_param_string(p) for p in node.params]
-        all_params = [this_param] + param_strs
-        return_llvm_type = self.__get_llvm_type(node.return_type)
-        return f"define {return_llvm_type} @{mangled_name}({', '.join(all_params)}) {{"
-
-    def __declare_this_pointer(self, struct_name: str):
-        self.current_struct_context = struct_name
-        self.this_pointer = "%this"
-
-        fields = self.struct_definitions[struct_name]
-        for field_name, field_llvm_type, field_data_type in fields:
-            field_type = (
-                DataType.from_string(field_data_type) if DataType.is_data_type(field_data_type)
-                else field_data_type
-            )
-            self.variable_types[field_name] = field_type
-            self.variable_versions[field_name] = -1
-
-    def __load_field_from_this(self, field_name: str) -> str:
-        struct_name = self.current_struct_context
-        fields = self.struct_definitions[struct_name]
-
-        field_index = next(i for i, (name, _, _) in enumerate(fields) if name == field_name)
-        field_llvm_type = fields[field_index][1]
-
-        field_ptr = self.__get_temp_register()
-        self.translated_lines.append(
-            f"  {field_ptr} = getelementptr inbounds %struct.{struct_name}, "
-            f"%struct.{struct_name}* %this, i32 0, i32 {field_index}"
-        )
-
-        field_value = self.__get_temp_register()
-        self.translated_lines.append(
-            f"  {field_value} = load {field_llvm_type}, {field_llvm_type}* {field_ptr}"
-        )
-
-        return field_value
-
-    def __store_field_to_this(self, field_name: str, expr_node):
-        struct_name = self.current_struct_context
-        fields = self.struct_definitions[struct_name]
-
-        field_index = next(i for i, (name, _, _) in enumerate(fields) if name == field_name)
-        field_llvm_type = fields[field_index][1]
-        field_data_type = fields[field_index][2]
-
-        field_ptr = self.__get_temp_register()
-        self.translated_lines.append(
-            f"  {field_ptr} = getelementptr inbounds %struct.{struct_name}, "
-            f"%struct.{struct_name}* %this, i32 0, i32 {field_index}"
-        )
-
-        value = expr_node.accept(self)
-        expr_type = self.__get_node_type(expr_node)
-        value = self.__convert_type_if_needed(value, expr_type, field_data_type)
-
-        self.translated_lines.append(
-            f"  store {field_llvm_type} {value}, {field_llvm_type}* {field_ptr}"
-        )
-
     def visit_function_declaration(self, node: FunctionDeclNode):
         self.function_return_types[node.variable] = node.return_type
-
-        saved_state = self.__save_state()
-        self.__reset_function_state()
-
-        func_signature = self.__build_function_signature(node)
-        self.__declare_function_params(node)
-
-        node.body.accept(self)
-
-        self.__store_function_definition(func_signature)
-        self.__restore_state(saved_state)
-
-    def __save_state(self) -> dict:
-        return {
-            'lines': self.translated_lines,
-            'versions': self.variable_versions.copy(),
-            'types': self.variable_types.copy(),
-            'temp': self.temp_counter,
-            'label': self.label_counter
-        }
-
-    def __restore_state(self, state: dict):
-        self.translated_lines = state['lines']
-        self.variable_versions = state['versions']
-        self.variable_types = state['types']
-        self.temp_counter = state['temp']
-        self.label_counter = state['label']
-        self.in_function = False
-        self.current_struct_context = None
-        self.this_pointer = None
-
-    def __reset_function_state(self):
-        self.translated_lines = []
-        self.variable_versions = {}
-        self.variable_types = {}
-        self.temp_counter = 0
-        self.label_counter = 0
-        self.in_function = True
-        self.current_struct_context = None
-        self.this_pointer = None
+        
+        with self.function_context():
+            func_signature = self.__build_function_signature(node)
+            self.__declare_function_params(node)
+            node.body.accept(self)
+            self.__store_function_definition(func_signature)
 
     def __build_function_signature(self, node: FunctionDeclNode) -> str:
         param_strs = [self.__build_param_string(p) for p in node.params]
@@ -351,6 +280,8 @@ define void @printResult(i32 %val) {
 
     def __build_param_string(self, param) -> str:
         param_llvm_type = self.__get_llvm_type(param.param_type)
+        if not DataType.is_data_type(param.param_type):
+            param_llvm_type += "*"
         return f"{param_llvm_type} %{param.name}"
 
     def __declare_function_params(self, node: FunctionDeclNode):
@@ -368,84 +299,17 @@ define void @printResult(i32 %val) {
         self.function_definitions.append("")
 
     def visit_function_call(self, node: FunctionCallNode):
-        if node.field_chain:
-            return self.__generate_member_function_call(node)
-        else:
-            return self.__generate_regular_function_call(node)
-
-    def __generate_regular_function_call(self, node: FunctionCallNode):
         args = [self.__build_call_argument(arg) for arg in node.arguments]
         result_reg = self.__get_temp_register()
-
+        
         return_type = self.__get_node_type(node)
         if isinstance(return_type, DataType):
             return_llvm_type = return_type.to_llvm()
         else:
             return_llvm_type = f"%struct.{return_type}*"
-
+        
         self.translated_lines.append(f"  {result_reg} = call {return_llvm_type} @{node.value}({', '.join(args)})")
         return result_reg
-
-    def __generate_member_function_call(self, node: FunctionCallNode):
-        object_chain = node.field_chain
-        struct_type = self.__get_object_type_from_chain(object_chain.fields)
-        object_ptr = self.__get_object_pointer_from_chain(object_chain.fields)
-
-        mangled_name = f"{struct_type}_{node.value}"
-
-        this_arg = f"%struct.{struct_type}* {object_ptr}"
-        regular_args = [self.__build_call_argument(arg) for arg in node.arguments]
-        all_args = [this_arg] + regular_args
-
-        result_reg = self.__get_temp_register()
-        return_type = self.__get_node_type(node)
-        if isinstance(return_type, DataType):
-            return_llvm_type = return_type.to_llvm()
-        else:
-            return_llvm_type = f"%struct.{return_type}*"
-
-        self.translated_lines.append(
-            f"  {result_reg} = call {return_llvm_type} @{mangled_name}({', '.join(all_args)})"
-        )
-        return result_reg
-
-    def __get_object_type_from_chain(self, object_chain: list[str]) -> str:
-        current_type = self.variable_types[object_chain[0]]
-
-        for i in range(1, len(object_chain)):
-            if isinstance(current_type, str):
-                fields = self.struct_definitions[current_type]
-                field_info = next((f for f in fields if f[0] == object_chain[i]), None)
-                if field_info:
-                    field_data_type = field_info[2]
-                    current_type = (
-                        DataType.from_string(field_data_type) if DataType.is_data_type(field_data_type)
-                        else field_data_type
-                    )
-
-        return current_type
-
-    def __get_object_pointer_from_chain(self, object_chain: list[str]) -> str:
-        if len(object_chain) == 1:
-            return self.__get_current_register(object_chain[0])
-
-        current_reg = self.__get_current_register(object_chain[0])
-        current_type = self.variable_types[object_chain[0]]
-
-        for i in range(1, len(object_chain)):
-            if isinstance(current_type, str):
-                struct_name = current_type
-                fields = self.struct_definitions[struct_name]
-                field_index, field_llvm_type, field_data_type = self.__find_field(fields, object_chain[i])
-
-                field_ptr = self.__get_struct_field_ptr(struct_name, current_reg, field_index)
-                current_reg = field_ptr
-                current_type = (
-                    DataType.from_string(field_data_type) if DataType.is_data_type(field_data_type)
-                    else field_data_type
-                )
-
-        return current_reg
 
     def __build_call_argument(self, arg) -> str:
         arg_value = arg.accept(self)
@@ -506,11 +370,6 @@ define void @printResult(i32 %val) {
             raise ValueError(
                 f"Cannot reassign entire struct variable '{node.variable}' at line {node.line}! "
                 f"Use field assignment instead: {node.variable}.field = value")
-
-        if hasattr(self, 'current_struct_context') and self.current_struct_context and self.variable_versions.get(
-                node.variable) == -1:
-            self.__store_field_to_this(node.variable, node.expr_node)
-            return
 
         llvm_type = var_type.to_llvm()
         value = node.expr_node.accept(self)
@@ -597,10 +456,6 @@ define void @printResult(i32 %val) {
         return value
 
     def visit_id(self, node):
-        if hasattr(self, 'current_struct_context') and self.current_struct_context and self.variable_versions.get(
-                node.value) == -1:
-            return self.__load_field_from_this(node.value)
-
         return self.__get_current_register(node.value)
 
     def visit_number(self, node):
@@ -649,6 +504,8 @@ define void @printResult(i32 %val) {
         if isinstance(node, BooleanNode):
             return DataType.BOOL
         if isinstance(node, BinaryOpNode):
+            if node.operator.is_for_comparison():
+                return DataType.BOOL
             return node.result_type if node.result_type else DataType.I32
         if isinstance(node, UnaryOpNode):
             return DataType.BOOL
@@ -657,25 +514,19 @@ define void @printResult(i32 %val) {
         if isinstance(node, StructFieldNode):
             return self.__get_struct_field_type(node)
         if isinstance(node, FunctionCallNode):
-            if node.field_chain:
-                struct_type = self.__get_object_type_from_chain(node.field_chain.fields)
-                mangled_name = f"{struct_type}_{node.value}"
-                func_return_type = self.function_return_types.get(mangled_name, "i32")
-            else:
-                func_return_type = self.function_return_types.get(node.value, "i32")
-
+            func_return_type = self.function_return_types.get(node.value, "i32")
             if DataType.is_data_type(func_return_type):
                 return DataType.from_string(func_return_type)
-            return func_return_type
+            return func_return_type 
         return DataType.I32
 
     def __get_struct_field_type(self, node: StructFieldNode):
-        current_type = self.variable_types[node.field_chain.fields[0]]
+        current_type = self.variable_types[node.field_chain[0]]
 
-        for i in range(1, len(node.field_chain.fields)):
+        for i in range(1, len(node.field_chain)):
             if isinstance(current_type, str):
                 fields = self.struct_definitions[current_type]
-                field_info = next((f for f in fields if f[0] == node.field_chain.fields[i]), None)
+                field_info = next((f for f in fields if f[0] == node.field_chain[i]), None)
                 if field_info:
                     field_data_type = field_info[2]
                     current_type = DataType.from_string(field_data_type) if DataType.is_data_type(

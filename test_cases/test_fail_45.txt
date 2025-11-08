@@ -1,0 +1,14 @@
+struct Point
+{
+    i32 mut x
+    i32 mut y
+
+    fn getZ = () -> i32
+    {
+        return z
+    }
+}
+
+Point p{10, 20}
+i32 result{p.getZ()}
+return result

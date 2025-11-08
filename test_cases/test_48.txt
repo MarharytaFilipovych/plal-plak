@@ -1,0 +1,19 @@
+struct Data
+{
+    i32 mut num
+
+    fn getValue = () -> i32
+    {
+        return num
+    }
+
+    fn double = () -> i32
+    {
+        i32 val{getValue()}
+        return val * 2
+    }
+}
+
+Data d{21}
+i32 result{d.double()}
+return result

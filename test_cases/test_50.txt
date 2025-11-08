@@ -1,0 +1,13 @@
+struct BigNum
+{
+    i64 mut large
+
+    fn getLarge = () -> i64
+    {
+        return large
+    }
+}
+
+BigNum b{5000000000}
+i64 result{b.getLarge()}
+return result

@@ -4,7 +4,7 @@ mkdir -p llm
 mkdir -p obj
 mkdir -p exe
 
-for i in {1..40}; do
+for i in {1..50}; do
     echo "Testing test_$i..."
     python3 -m compiler.compiler ./test_cases/test_$i.txt ./llm/test_$i.ll
     if [ $? -ne 0 ]; then
@@ -17,7 +17,7 @@ for i in {1..40}; do
     echo ""
 done
 
-for i in {1..40}; do
+for i in {1..50}; do
     echo "Testing test_$i (should fail)..."
     python3 -m compiler.compiler ./test_cases/test_fail_$i.txt ./llm/test_fail_$i.ll
     if [ $? -eq 0 ]; then

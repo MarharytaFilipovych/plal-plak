@@ -1,0 +1,14 @@
+struct Point
+{
+    i32 mut x
+    i32 mut y
+
+    fn sum = () -> i32
+    {
+        return x + y
+    }
+}
+
+Point p{15, 25}
+i32 total{p.sum()}
+return total

@@ -1,0 +1,17 @@
+struct Checker
+{
+    i32 mut value
+
+    fn check = () -> i32
+    {
+        if value == 10
+        {
+            return 100
+        }
+        return 0
+    }
+}
+
+Checker c{10}
+i32 result{c.check()}
+return result

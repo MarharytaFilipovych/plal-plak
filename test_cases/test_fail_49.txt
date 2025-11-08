@@ -1,0 +1,13 @@
+struct Data
+{
+    i32 mut value
+
+    fn compute = (i32 value) -> i32
+    {
+        return value + value
+    }
+}
+
+Data d{10}
+i32 result{d.compute(5)}
+return result

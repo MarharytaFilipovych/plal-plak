@@ -1,0 +1,13 @@
+struct Data
+{
+    i32 mut num
+
+    fn getValue = () -> i32
+    {
+        return true
+    }
+}
+
+Data d{10}
+i32 result{d.getValue()}
+return result

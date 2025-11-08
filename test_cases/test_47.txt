@@ -1,0 +1,21 @@
+struct Math
+{
+    i32 mut value
+
+    fn add = (i32 x) -> i32
+    {
+        value = value + x
+        return value
+    }
+
+    fn multiply = (i32 x) -> i32
+    {
+        value = value * x
+        return value
+    }
+}
+
+Math mut m{5}
+i32 a{m.add(3)}
+i32 b{m.multiply(2)}
+return b

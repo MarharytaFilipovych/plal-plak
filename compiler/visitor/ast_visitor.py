@@ -17,7 +17,6 @@ from ..node.number_node import NumberNode
 from ..node.program_node import ProgramNode
 from ..node.return_node import ReturnNode
 from ..node.struct_decl_node import StructDeclNode
-from ..node.struct_member_function_call_node import StructMemberFunctionCallNode
 from ..node.unary_op_node import UnaryOpNode
 
 

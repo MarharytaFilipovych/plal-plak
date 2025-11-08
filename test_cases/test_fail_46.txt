@@ -1,0 +1,14 @@
+struct Box
+{
+    i32 size
+
+    fn setSize = (i32 newSize) -> i32
+    {
+        size = newSize
+        return size
+    }
+}
+
+Box b{10}
+i32 result{b.setSize(20)}
+return result

@@ -1,0 +1,14 @@
+struct Box
+{
+    i32 mut size
+
+    fn double = () -> i32
+    {
+        size = size * 2
+        return size
+    }
+}
+
+Box mut b{5}
+i32 newSize{b.double()}
+return newSize

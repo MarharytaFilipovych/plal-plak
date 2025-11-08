@@ -1,0 +1,14 @@
+struct Range
+{
+    i32 mut min
+    i32 mut max
+
+    fn isValid = () -> bool
+    {
+        return min == 10
+    }
+}
+
+Range r{10, 100}
+bool valid{r.isValid()}
+return valid
