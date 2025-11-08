@@ -35,6 +35,9 @@ class FunctionGenerator:
         self.__finalize_function()
 
     def generate_regular_function_call(self, node, visitor) -> str:
+        if self.current_struct_context and self.__is_member_function(node.value):
+            return self.__generate_member_to_member_call(node, visitor)
+        
         args = [self.__build_call_argument(arg, visitor) for arg in node.arguments]
         result_reg = self.emitter.get_temp_register()
         return_type = self.type_converter.get_node_type(node)
@@ -42,9 +45,33 @@ class FunctionGenerator:
         return_llvm_type = self.__get_llvm_type(return_type)
         self.emitter.emit_line(f"  {result_reg} = call {return_llvm_type} @{node.value}({', '.join(args)})")
         return result_reg
+    
+    def __is_member_function(self, func_name: str) -> bool:
+        if not self.current_struct_context:
+            return False
+        
+        struct_name = self.current_struct_context
+        if struct_name not in self.struct_ops.struct_definitions:
+            return False
+        
+        mangled_name = f"{struct_name}_{func_name}"
+        return mangled_name in self.function_return_types
+    
+    def __generate_member_to_member_call(self, node, visitor) -> str:
+        struct_name = self.current_struct_context
+        mangled_name = f"{struct_name}_{node.value}"
+        
+        arg_strs = [f"%struct.{struct_name}* %this"] + [
+            self.__build_call_argument(arg, visitor) for arg in node.arguments]
+        
+        result_reg = self.emitter.get_temp_register()
+        return_type = self.type_converter.get_node_type(node)
+        return_llvm_type = self.__get_llvm_type(return_type)
+        
+        self.emitter.emit_line(f"  {result_reg} = call {return_llvm_type} @{mangled_name}({', '.join(arg_strs)})")
+        return result_reg
 
     def generate_member_function_call(self, node, visitor) -> str:
-        # node.field_chain is a FieldChain object, extract the list
         object_chain = node.field_chain.fields
         struct_type = self.type_converter.get_object_type_from_chain(object_chain)
         object_ptr = self.struct_ops.get_object_pointer_from_chain(object_chain)

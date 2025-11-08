@@ -1,12 +1,22 @@
 Links to claude.ai: 
+-----
+practice 5:
 * https://claude.ai/share/6cb4db48-d528-4e92-912e-3200e1059d6a
+
 -----
+practice 6:
 * https://claude.ai/share/22fe88ec-a1ad-4542-aedc-571ff6c7c99b
+* https://claude.ai/share/0ca96d03-4f4e-4315-9870-df5b7db0d93c
+* https://claude.ai/share/6810766e-0322-4b71-b5c5-b3f0513c2d8f
+
 -----
+practice 7:
 * https://www.geeksforgeeks.org/python/python-dictionary/
 * https://www.geeksforgeeks.org/python/python-tuples/
 * https://claude.ai/share/c4d21666-4425-4606-b4c8-fa12347b7c47
 * https://claude.ai/share/1242e14f-0bb5-4493-8491-8d12a41e8ec0
 * https://claude.ai/share/4f8302ff-9752-43eb-8c95-4207561cb8c7
 * https://claude.ai/share/9cd094a6-3f94-4ec7-808a-8be1b7d7cdf7
-* 
+* https://claude.ai/share/869c8279-cc1a-4f92-9a98-f37673782405
+
+** links from other practices are within relevant branches

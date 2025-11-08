@@ -46,7 +46,14 @@ class SemanticAnalyzer(ASTVisitor):
 
 
     def __register_member_functions(self, struct_name: str, member_functions):
+        member_func_names = set()
         for member_function in member_functions:
+            if member_function.variable in member_func_names:
+                raise ValueError(f"Duplicate member function '{member_function.variable}' "
+                                f"in struct '{struct_name}' at line {member_function.line}! \
+                                Don't you have enough imagination to create sth new???")
+            member_func_names.add(member_function.variable)
+            
             param_types = [p.param_type for p in member_function.params]
             self.context.define_function(struct_name, member_function.variable,
                                          param_types, member_function.return_type)
@@ -365,8 +372,11 @@ class SemanticAnalyzer(ASTVisitor):
 
         self.__declare_function_parameters(node)
         
+        if not node.body.return_node:
+            raise ValueError(f"Member function '{node.variable}' in struct '{struct_name}' must have a return statement!")
+        
         self._expected_return_type = self.__resolve_type(node.return_type)
-        self._function_name = f"{struct_name}_{node.variable}"
+        self._function_name = f"{struct_name}::{node.variable}"
         
         node.body.accept(self)
         
