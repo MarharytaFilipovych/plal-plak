@@ -29,6 +29,7 @@ from compiler.token.token_type import TokenType
 from compiler.token.token_class import Token
 from compiler.constants import NOT
 
+
 class SyntaxParser:
     def __init__(self, tokens: list[Token]):
         self.tokens = tokens
@@ -48,11 +49,12 @@ class SyntaxParser:
     def __expect_token(self, token_type: TokenType) -> Token:
         token = self.__peek()
         if not token:
-            raise ValueError(f"I expected a token of the type {token_type.name} but you decided to abandon this promising code!")
+            raise ValueError(f"I expected a token of the type {token_type.name} "
+                             f"but you decided to abandon this promising code!")
 
         if token.token_type != token_type:
             raise ValueError(f"I expected a token of the type {token_type.name} but you gave me '{token.value}' "
-                            f"at line {token.line}!!!")
+                             f"at line {token.line}!!!")
 
         return self.__eat()
 
@@ -121,8 +123,9 @@ class SyntaxParser:
         elif token.token_type == TokenType.IF:
             return self.__parse_if_statement()
         else:
-            raise ValueError(f"You should have either declared a variable or assign this cutie to sth at line {token.line}, "
-                            f"but you decided to use this token type: {token.value}")
+            raise ValueError(f"You should have either declared a variable or assign this "
+                             f"cutie to sth at line {token.line}, "
+                             f"but you decided to use this token type: {token.value}")
 
     def __skip_newlines(self):
         while self.__peek() and self.__peek().token_type == TokenType.NEWLINE:
@@ -150,11 +153,9 @@ class SyntaxParser:
         var_type = self.__parse_type()
         can_mutate = self.__parse_mutability()
         token_variable = self.__expect_token(TokenType.VARIABLE)
-        
-        if var_type in self.declared_structs:
-            init_expr = self.__parse_struct_initialization(var_type, token_variable.line)
-        else:
-            init_expr = self.__parse_initializer()
+
+        init_expr = self.__parse_struct_initialization(var_type, token_variable.line)\
+            if var_type in self.declared_structs else self.__parse_initializer()
 
         data_type = DataType.from_string(var_type) if var_type in ["i32", "i64", "bool"] else var_type
         return DeclNode(token_variable.value, init_expr, token_variable.line, can_mutate, data_type)
@@ -239,7 +240,8 @@ class SyntaxParser:
         value_expr = self.__parse_expression()
 
         return (
-            StructFieldAssignNode(StructFieldNode(FieldChain(field_chain), variable_token.line), value_expr, variable_token.line)
+            StructFieldAssignNode(StructFieldNode(FieldChain(field_chain), variable_token.line),
+                                  value_expr, variable_token.line)
             if field_chain else AssignNode(variable_token.value, value_expr, variable_token.line))
 
     def __parse_if_statement(self) -> IfNode:

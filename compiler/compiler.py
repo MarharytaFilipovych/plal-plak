@@ -3,7 +3,7 @@ import os.path
 import sys
 from .lexer.lexer import Lexer
 import argparse
-from .visitor.code_generator import CodeGenerator
+from compiler.visitor.code_generator.code_generator import CodeGenerator
 from .visitor.semantic_analyzer import SemanticAnalyzer
 from .syntax_parser import SyntaxParser
 

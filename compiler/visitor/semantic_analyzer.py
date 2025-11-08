@@ -29,18 +29,10 @@ class SemanticAnalyzer(ASTVisitor):
         self.context = Context()
 
     def visit_program(self, node: ProgramNode):
-        for struct_decl in node.struct_decls:
-            struct_decl.accept(self)
-
-        for func_decl in node.func_decls:
-            self.__register_function(func_decl)
-
-        for func_decl in node.func_decls:
-            func_decl.accept(self)
-
-        for stmt in node.statement_nodes:
-            stmt.accept(self)
-
+        [struct_decl.accept(self) for struct_decl in node.struct_decls]
+        [self.__register_function(GLOBAL_SCOPE, func_decl) for func_decl in node.func_decls]
+        [func_decl.accept(self) for func_decl in node.func_decls]
+        [stmt.accept(self) for stmt in node.statement_nodes]
         node.return_node.accept(self)
 
     def visit_struct_declaration(self, node: StructDeclNode):

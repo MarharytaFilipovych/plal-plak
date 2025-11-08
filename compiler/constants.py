@@ -14,7 +14,7 @@ ASSIGNMENT = '='
 COMMA = ','
 DOT = '.'
 ARROW = '->'
-COMMENT_PART= "/"
+COMMENT_PART = "/"
 WHITESPACE = ' \t\r'
 OPERATORS = '+-*='
 
