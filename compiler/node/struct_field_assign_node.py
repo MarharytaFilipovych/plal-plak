@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 
 class StructFieldAssignNode(StmtNode):
     def __init__(self, target: StructFieldNode, expr_node: ExprNode, line: int):
-        super().__init__(target.field_chain[0], expr_node, line)
+        super().__init__(target.field_chain.fields[0], expr_node, line)
         self.target = target
 
     def accept(self, visitor: 'ASTVisitor'):

@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 from typing import Optional
-
 from ..constants import I32_MAX, I32_MIN, GLOBAL_SCOPE
 from .ast_visitor import ASTVisitor
 from compiler.context.context import Context
@@ -27,6 +26,8 @@ from ..node.struct_init_node import StructInitNode
 class SemanticAnalyzer(ASTVisitor):
     def __init__(self):
         self.context = Context()
+        self._expected_return_type = None
+        self._function_name = None
 
     def visit_program(self, node: ProgramNode):
         [struct_decl.accept(self) for struct_decl in node.struct_decls]
@@ -40,6 +41,8 @@ class SemanticAnalyzer(ASTVisitor):
         self.__validate_field_types(node)
         self.context.define_struct(node.variable, node.fields)
         self.__register_member_functions(node.variable, node.member_functions)
+        [self.__analyze_member_function(node.variable, member_func) for member_func in node.member_functions]
+
 
     def __register_member_functions(self, struct_name: str, member_functions):
         for member_function in member_functions:
@@ -179,7 +182,15 @@ class SemanticAnalyzer(ASTVisitor):
         self.__check_type_match(expr_type, data_type, node.line)
 
     def visit_return(self, node: ReturnNode):
-        return node.expr_node.accept(self)
+        returned_type = node.expr_node.accept(self)
+        
+        # If we're inside a function, validate the return type matches
+        if hasattr(self, '_expected_return_type') and self._expected_return_type is not None:
+            if not self.__types_match(returned_type, self._expected_return_type):
+                raise ValueError(f"Function '{self._function_name}' returns {returned_type} "
+                               f"but declared as {self._expected_return_type}!")
+        
+        return returned_type
 
     def visit_binary_operation(self, node: BinaryOpNode):
         left_type = node.left.accept(self)
@@ -264,8 +275,18 @@ class SemanticAnalyzer(ASTVisitor):
     def visit_function_declaration(self, node: FunctionDeclNode):
         self.context.enter_scope()
         self.__declare_function_parameters(node)
+        
+        if not node.body.return_node:
+            raise ValueError(f"Function '{node.variable}' must have a return statement!")
+        
+        self._expected_return_type = self.__resolve_type(node.return_type)
+        self._function_name = node.variable
+        
         node.body.accept(self)
-        self.__validate_function_return(node)
+        
+        # Clean up
+        self._expected_return_type = None
+        self._function_name = None
         self.context.exit_scope()
 
     def __declare_function_parameters(self, node: FunctionDeclNode):
@@ -273,16 +294,6 @@ class SemanticAnalyzer(ASTVisitor):
             param_type = self.__resolve_type(param.param_type)
             if not self.context.declare_variable(param.name, param_type, mutable=False):
                 raise ValueError(f"Duplicate parameter '{param.name}' in function '{node.variable}'!")
-
-    def __validate_function_return(self, node: FunctionDeclNode):
-        if not node.body.return_node:
-            raise ValueError(f"Function '{node.variable}' must have a return statement!")
-
-        returned_type = node.body.return_node.expr_node.accept(self)
-        expected_type = self.__resolve_type(node.return_type)
-        
-        if not self.__types_match(returned_type, expected_type):
-            raise ValueError(f"Function '{node.variable}' returns {returned_type} but declared as {expected_type}!")
 
     def visit_function_call(self, node: FunctionCallNode):
         function_scope = self.__identify_function_scope(node.field_chain)
@@ -323,9 +334,9 @@ class SemanticAnalyzer(ASTVisitor):
     def __is_type_compatible(source_type: DataType, target_type: DataType) -> bool:
         return source_type == target_type or (source_type == DataType.I32 and target_type == DataType.I64)
 
-    def __identify_function_scope(self, chain: Optional[FieldChain]) -> str:
-        return self.context.get_variable_type(chain.fields[-1]) if chain else GLOBAL_SCOPE
-
+    def __identify_function_scope(self, field_chain: Optional[FieldChain]) -> str:
+        return self.context.get_variable_type(field_chain.fields[-1]) if field_chain else GLOBAL_SCOPE
+    
     def __analyze_member_function(self, struct_name: str, node: FunctionDeclNode):
         self.context.enter_scope()
 
@@ -338,3 +349,13 @@ class SemanticAnalyzer(ASTVisitor):
         node.body.accept(self)
         self.__validate_function_return(node)
         self.context.exit_scope()
+
+    def __validate_function_return(self, node: FunctionDeclNode):
+        if not node.body.return_node:
+            raise ValueError(f"Function '{node.variable}' must have a return statement!")
+
+        returned_type = node.body.return_node.expr_node.accept(self)
+        expected_type = self.__resolve_type(node.return_type)
+        
+        if not self.__types_match(returned_type, expected_type):
+            raise ValueError(f"Function '{node.variable}' returns {returned_type} but declared as {expected_type}!")

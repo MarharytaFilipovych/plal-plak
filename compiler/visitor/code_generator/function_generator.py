@@ -15,10 +15,8 @@ class FunctionGenerator:
 
     def generate_standalone_function(self, node, visitor):
         self.__prepare_function_context(node.variable, node.return_type)
-
         func_signature = self.__build_function_signature(node)
         self.__initialize_function_body(node, visitor, func_signature)
-
         self.__finalize_function()
 
     def __finalize_function(self):
@@ -41,7 +39,7 @@ class FunctionGenerator:
         result_reg = self.emitter.get_temp_register()
         return_type = self.type_converter.get_node_type(node)
 
-        return_llvm_type = self.get_llvm_type(return_type)
+        return_llvm_type = self.__get_function_return_llvm_type(return_type)
         self.emitter.emit_line(f"  {result_reg} = call {return_llvm_type} @{node.value}({', '.join(args)})")
         return result_reg
 
@@ -56,7 +54,7 @@ class FunctionGenerator:
 
         result_reg = self.emitter.get_temp_register()
         return_type = self.type_converter.get_node_type(node)
-        return_llvm_type = self.get_llvm_type(return_type)
+        return_llvm_type = self.__get_function_return_llvm_type(return_type)
 
         self.emitter.emit_line(f"  {result_reg} = call {return_llvm_type} @{mangled_name}({', '.join(arg_strs)})")
         return result_reg
@@ -101,17 +99,17 @@ class FunctionGenerator:
 
     def __build_function_signature(self, node) -> str:
         param_strs = [self.__build_param_string(p) for p in node.params]
-        return_llvm_type = self.get_llvm_type(node.return_type)
+        return_llvm_type = self.__get_return_type_for_signature(node.return_type)
         return f"define {return_llvm_type} @{node.variable}({', '.join(param_strs)}) {{"
 
     def __build_member_function_signature(self, struct_name: str, node, mangled_name: str) -> str:
-        return_llvm_type = self.get_llvm_type(node.return_type)
+        return_llvm_type = self.__get_llvm_type(node.return_type)
         param_strs = [f"%struct.{struct_name}* %this"] + [
             self.__build_param_string(p) for p in node.params]
         return f"define {return_llvm_type} @{mangled_name}({', '.join(param_strs)}) {{"
 
     def __build_param_string(self, param) -> str:
-        llvm_type = self.get_llvm_type(param.param_type)
+        llvm_type = self.__get_llvm_type(param.param_type)
         return f"{llvm_type} %{param.name}"
 
     def __declare_function_params(self, node):

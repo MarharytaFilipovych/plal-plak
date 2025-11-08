@@ -47,6 +47,10 @@ class VariableRegistry:
         }
 
     def restore_state(self, state: dict):
+        for var in state['versions']:
+            if var in self.max_versions and var in state['max_versions']:
+                state['max_versions'][var] = max(self.max_versions[var], state['max_versions'][var])
+        
         self.variable_versions = state['versions']
         self.variable_types = state['types']
         self.max_versions = state['max_versions']
