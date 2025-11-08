@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from typing import Optional
-from ..constants import I32_MAX, I32_MIN, GLOBAL_SCOPE
+from ..constants import I32_MAX, I32_MIN, GLOBAL_SCOPE, NOT
 from .ast_visitor import ASTVisitor
 from compiler.context.context import Context
 from ..helpers.field_chain import FieldChain
@@ -28,6 +28,7 @@ class SemanticAnalyzer(ASTVisitor):
         self.context = Context()
         self._expected_return_type = None
         self._function_name = None
+        self._current_struct_context = None
 
     def visit_program(self, node: ProgramNode):
         [struct_decl.accept(self) for struct_decl in node.struct_decls]
@@ -184,7 +185,6 @@ class SemanticAnalyzer(ASTVisitor):
     def visit_return(self, node: ReturnNode):
         returned_type = node.expr_node.accept(self)
         
-        # If we're inside a function, validate the return type matches
         if hasattr(self, '_expected_return_type') and self._expected_return_type is not None:
             if not self.__types_match(returned_type, self._expected_return_type):
                 raise ValueError(f"Function '{self._function_name}' returns {returned_type} "
@@ -253,15 +253,14 @@ class SemanticAnalyzer(ASTVisitor):
 
     def visit_code_block(self, node: CodeBlockNode):
         self.context.enter_scope()
-        for n in node.statements:
-            n.accept(self)
+        [n.accept(self)for n in node.statements]
         if node.return_node:
             node.return_node.accept(self)
         self.context.exit_scope()
 
     def visit_unary_operation(self, node: UnaryOpNode) -> DataType:
         operand_type = node.operand.accept(self)
-        if node.operator == "!":
+        if node.operator == NOT:
             if operand_type != DataType.BOOL:
                 raise ValueError(f"The NOT operator (!) can only be applied to the boolean values, dummy, "
                                  f"but you applied it to {operand_type}! Do you think it is okay?")
@@ -284,7 +283,6 @@ class SemanticAnalyzer(ASTVisitor):
         
         node.body.accept(self)
         
-        # Clean up
         self._expected_return_type = None
         self._function_name = None
         self.context.exit_scope()
@@ -297,6 +295,11 @@ class SemanticAnalyzer(ASTVisitor):
 
     def visit_function_call(self, node: FunctionCallNode):
         function_scope = self.__identify_function_scope(node.field_chain)
+        
+        if function_scope == GLOBAL_SCOPE and hasattr(self, '_current_struct_context') and self._current_struct_context:
+            if self.context.is_function_defined(self._current_struct_context, node.value):
+                function_scope = self._current_struct_context
+        
         if not self.context.is_function_defined(function_scope, node.value):
             raise ValueError(f"Function '{node.value}' not defined at line {node.line}!")
 
@@ -335,10 +338,25 @@ class SemanticAnalyzer(ASTVisitor):
         return source_type == target_type or (source_type == DataType.I32 and target_type == DataType.I64)
 
     def __identify_function_scope(self, field_chain: Optional[FieldChain]) -> str:
-        return self.context.get_variable_type(field_chain.fields[-1]) if field_chain else GLOBAL_SCOPE
+        if not field_chain:
+            return GLOBAL_SCOPE
+        
+        current_type = self.context.get_variable_type(field_chain.fields[0])
+        
+        for field_name in field_chain.fields[1:]:
+            if isinstance(current_type, str): 
+                struct_fields = self.context.get_struct_definition(current_type)
+                field_info = next((f for f in struct_fields if f.variable == field_name), None)
+                if field_info:
+                    current_type = self.__resolve_type(field_info.data_type)
+            else:
+                break
+        
+        return current_type if isinstance(current_type, str) else GLOBAL_SCOPE
     
     def __analyze_member_function(self, struct_name: str, node: FunctionDeclNode):
         self.context.enter_scope()
+        self._current_struct_context = struct_name
 
         struct_fields = self.context.get_struct_definition(struct_name)
         for field in struct_fields:
@@ -346,16 +364,13 @@ class SemanticAnalyzer(ASTVisitor):
             self.context.declare_variable(field.variable, field_type, field.mutable)
 
         self.__declare_function_parameters(node)
-        node.body.accept(self)
-        self.__validate_function_return(node)
-        self.context.exit_scope()
-
-    def __validate_function_return(self, node: FunctionDeclNode):
-        if not node.body.return_node:
-            raise ValueError(f"Function '{node.variable}' must have a return statement!")
-
-        returned_type = node.body.return_node.expr_node.accept(self)
-        expected_type = self.__resolve_type(node.return_type)
         
-        if not self.__types_match(returned_type, expected_type):
-            raise ValueError(f"Function '{node.variable}' returns {returned_type} but declared as {expected_type}!")
+        self._expected_return_type = self.__resolve_type(node.return_type)
+        self._function_name = f"{struct_name}_{node.variable}"
+        
+        node.body.accept(self)
+        
+        self._expected_return_type = None
+        self._function_name = None
+        self._current_struct_context = None
+        self.context.exit_scope()

@@ -107,14 +107,12 @@ class CodeGenerator(ASTVisitor):
         self.func_gen.generate_standalone_function(node, self)
 
     def visit_function_call(self, node):
-        return (self.func_gen.generate_member_function_call(node, self)
-                if node.field_chain
-                else self.func_gen.generate_regular_function_call(node, self))
+        return self.func_gen.generate_member_function_call(node, self) \
+        if node.field_chain else self.func_gen.generate_regular_function_call(node, self)
 
     def visit_declaration(self, node):
-        (self.__declare_struct_variable(node)
-         if isinstance(node.data_type, str)
-         else self.__declare_primitive_variable(node))
+        self.__declare_struct_variable(node) \
+         if isinstance(node.data_type, str) else self.__declare_primitive_variable(node)
 
     def __declare_struct_variable(self, node):
         struct_value = node.expr_node.accept(self)
