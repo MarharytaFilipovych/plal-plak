@@ -357,7 +357,7 @@ class SyntaxParser:
 
                     if self.__is_function_call():
                         func_name = field_chain[-1]
-                        object_chain = field_chain[:-1]
+                        object_chain = FieldChain(field_chain[:-1])
                         return self.__parse_function_call(func_name, token.line, object_chain)
 
                     return StructFieldNode(FieldChain(field_chain), token.line)
@@ -415,7 +415,7 @@ class SyntaxParser:
         return FunctionParam(param_type, param_name)
 
     def __parse_function_call(self, func_name: str, line: int,
-                              field_chain: Optional[list[str]] = None) -> FunctionCallNode:
+                              field_chain: Optional[FieldChain] = None) -> FunctionCallNode:
         arguments = self.__parse_parenthesized_list(self.__parse_expression)
         return FunctionCallNode(func_name, arguments, line, field_chain)
 

@@ -5,4 +5,7 @@ Links to claude.ai:
 -----
 * https://www.geeksforgeeks.org/python/python-dictionary/
 * https://www.geeksforgeeks.org/python/python-tuples/
-*
+* https://claude.ai/share/c4d21666-4425-4606-b4c8-fa12347b7c47
+* https://claude.ai/share/1242e14f-0bb5-4493-8491-8d12a41e8ec0
+* https://claude.ai/share/4f8302ff-9752-43eb-8c95-4207561cb8c7
+* 

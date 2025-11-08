@@ -39,12 +39,13 @@ class FunctionGenerator:
         result_reg = self.emitter.get_temp_register()
         return_type = self.type_converter.get_node_type(node)
 
-        return_llvm_type = FunctionGenerator.__get_llvm_type(return_type)
+        return_llvm_type = self.__get_llvm_type(return_type)
         self.emitter.emit_line(f"  {result_reg} = call {return_llvm_type} @{node.value}({', '.join(args)})")
         return result_reg
 
     def generate_member_function_call(self, node, visitor) -> str:
-        object_chain = node.field_chain
+        # node.field_chain is a FieldChain object, extract the list
+        object_chain = node.field_chain.fields
         struct_type = self.type_converter.get_object_type_from_chain(object_chain)
         object_ptr = self.struct_ops.get_object_pointer_from_chain(object_chain)
         mangled_name = f"{struct_type}_{node.value}"
@@ -54,7 +55,7 @@ class FunctionGenerator:
 
         result_reg = self.emitter.get_temp_register()
         return_type = self.type_converter.get_node_type(node)
-        return_llvm_type = FunctionGenerator.__get_llvm_type(return_type)
+        return_llvm_type = self.__get_llvm_type(return_type)
 
         self.emitter.emit_line(f"  {result_reg} = call {return_llvm_type} @{mangled_name}({', '.join(arg_strs)})")
         return result_reg
@@ -69,11 +70,14 @@ class FunctionGenerator:
         field_ptr, field_llvm_type = self.__get_this_field_pointer(field_name)
         self.emitter.emit_line(f"  store {field_llvm_type} {value}, {field_llvm_type}* {field_ptr}")
 
-    @staticmethod
-    def __get_llvm_type(data_type) -> str:
-        return (data_type.to_llvm()
-                if isinstance(data_type, DataType)
-                else f"%struct.{data_type}*")
+    def __get_llvm_type(self, data_type) -> str:
+        if isinstance(data_type, DataType):
+            return data_type.to_llvm()
+        
+        if DataType.is_data_type(data_type):
+            return DataType.from_string(data_type).to_llvm()
+        
+        return f"%struct.{data_type}*"
 
     def __get_this_field_pointer(self, field_name: str) -> tuple[str, str]:
         struct_name = self.current_struct_context
@@ -99,18 +103,17 @@ class FunctionGenerator:
 
     def __build_function_signature(self, node) -> str:
         param_strs = [self.__build_param_string(p) for p in node.params]
-        return_llvm_type = FunctionGenerator.__get_llvm_type(node.return_type)
+        return_llvm_type = self.__get_llvm_type(node.return_type)
         return f"define {return_llvm_type} @{node.variable}({', '.join(param_strs)}) {{"
 
     def __build_member_function_signature(self, struct_name: str, node, mangled_name: str) -> str:
-        return_llvm_type = FunctionGenerator.__get_llvm_type(node.return_type)
+        return_llvm_type = self.__get_llvm_type(node.return_type)
         param_strs = [f"%struct.{struct_name}* %this"] + [
             self.__build_param_string(p) for p in node.params]
         return f"define {return_llvm_type} @{mangled_name}({', '.join(param_strs)}) {{"
 
-    @staticmethod
-    def __build_param_string(param) -> str:
-        llvm_type = FunctionGenerator.__get_llvm_type(param.param_type)
+    def __build_param_string(self, param) -> str:
+        llvm_type = self.__get_llvm_type(param.param_type)
         return f"{llvm_type} %{param.name}"
 
     def __declare_function_params(self, node):
@@ -137,7 +140,7 @@ class FunctionGenerator:
     def __build_call_argument(self, arg, visitor) -> str:
         arg_value = arg.accept(visitor)
         arg_type = self.type_converter.get_node_type(arg)
-        arg_llvm_type = FunctionGenerator.__get_llvm_type(arg_type)
+        arg_llvm_type = self.__get_llvm_type(arg_type)
         return f"{arg_llvm_type} {arg_value}"
 
     def __save_state(self) -> dict:
