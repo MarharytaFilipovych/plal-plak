@@ -18,6 +18,8 @@ COMMENT_PART = "/"
 WHITESPACE = ' \t\r'
 OPERATORS = '+-*='
 
+CALLABLE = "call"
+
 KEYWORDS: dict = {
     "i32": TokenType.I32_TYPE,
     "mut": TokenType.MUT,

@@ -27,7 +27,7 @@ from compiler.node.struct_init_node import StructInitNode
 from compiler.node.unary_op_node import UnaryOpNode
 from compiler.token.token_type import TokenType
 from compiler.token.token_class import Token
-from compiler.constants import NOT
+from compiler.constants import NOT, CALLABLE
 
 
 class SyntaxParser:
@@ -154,7 +154,7 @@ class SyntaxParser:
         can_mutate = self.__parse_mutability()
         token_variable = self.__expect_token(TokenType.VARIABLE)
 
-        init_expr = self.__parse_struct_initialization(var_type, token_variable.line)\
+        init_expr = self.__parse_struct_initialization(var_type, token_variable.line) \
             if var_type in self.declared_structs else self.__parse_initializer()
 
         data_type = DataType.from_string(var_type) if var_type in ["i32", "i64", "bool"] else var_type
@@ -351,30 +351,39 @@ class SyntaxParser:
                 self.__eat()
                 return NumberNode(token.value)
             case TokenType.VARIABLE:
-                self.__eat()
-                if self.__is_field_access():
-                    field_chain = self.__gather_field_accessors(token.value)
-
-                    if self.__is_function_call():
-                        func_name = field_chain[-1]
-                        object_chain = FieldChain(field_chain[:-1])
-                        return self.__parse_function_call(func_name, token.line, object_chain)
-
-                    return StructFieldNode(FieldChain(field_chain), token.line)
-
-                if self.__is_function_call():
-                    return self.__parse_function_call(token.value, token.line)
-
-                if self.__is_struct_initialization(token.value):
-                    return self.__parse_struct_initialization(token.value, token.line)
-
-                return IDNode(token.value, token.line)
+                return self.__parse_token_variable(token)
             case TokenType.TRUE | TokenType.FALSE:
                 self.__eat()
                 return BooleanNode(token.value)
             case _:
                 raise ValueError(f"You should have used either a number, a variable, or a boolean "
                                  f"at line {token.line}, not {token.value}!")
+
+    def __parse_token_variable(self, token: Token) -> FactorNode:
+        self.__eat()
+        if self.__is_field_access():
+            self.__parse_field_access(token)
+        if self.__is_function_call():
+            if token.value in self.declared_structs:
+                synthetic_chain = FieldChain([token.value])
+                return self.__parse_function_call(CALLABLE, token.line, synthetic_chain)
+            return self.__parse_function_call(token.value, token.line)
+
+        if self.__is_function_call():
+            return self.__parse_function_call(token.value, token.line)
+
+        if self.__is_struct_initialization(token.value):
+            return self.__parse_struct_initialization(token.value, token.line)
+
+        return IDNode(token.value, token.line)
+
+    def __parse_field_access(self, token: Token) -> FactorNode:
+        field_chain = self.__gather_field_accessors(token.value)
+        if self.__is_function_call():
+            func_name = field_chain[-1]
+            object_chain = FieldChain(field_chain[:-1])
+            return self.__parse_function_call(func_name, token.line, object_chain)
+        return StructFieldNode(FieldChain(field_chain), token.line)
 
     def __is_struct_initialization(self, value: str) -> bool:
         return self.__peek() and self.__peek().token_type == TokenType.LEFT_BRACKET and value in self.declared_structs
