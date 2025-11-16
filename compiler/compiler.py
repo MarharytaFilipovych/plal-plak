@@ -3,9 +3,9 @@ import os.path
 import sys
 from .lexer.lexer import Lexer
 import argparse
-from compiler.visitor.code_generator.code_generator import CodeGenerator
-from .visitor.semantic_analyzer import SemanticAnalyzer
-from .syntax_parser import SyntaxParser
+from .visitor.code_generator.code_generator import CodeGenerator
+from compiler.visitor.semantic_analyzer.semantic_analyzer import SemanticAnalyzer
+from compiler.syntax_parser.syntax_parser import SyntaxParser
 
 
 class Compiler:

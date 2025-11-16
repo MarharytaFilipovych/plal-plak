@@ -20,3 +20,152 @@ practice 7:
 * https://claude.ai/share/869c8279-cc1a-4f92-9a98-f37673782405
 
 ** links from other practices are within relevant branches
+
+
+----
+practice 8:
+CHATS:
+*
+
+PROMPT (provided repo link):
+GIVE ME 3 failing and 3 happy txt tests available for download for callable object As we alreay have functions and member functions in the structure, we will add one
+
+ANSWER:
+The following are 3 successful ("happy") and 3 failing test cases for the callable object feature. These files should be placed in your `test_cases/` directory, named sequentially after your existing files.
+
+### Happy Path Tests
+
+**1. `test_51.txt`: Simple Callable Object Call**
+This test defines a `Multiplier` struct with a `call` function to multiply an input by a stored factor. It demonstrates the shorthand `m(10)` syntax for `m.call(10)`.
+
+```
+struct Multiplier
+{
+    i32 factor
+
+    fn call = (i32 x) -> i32
+    {
+        return factor * x
+    }
+}
+
+Multiplier m{5}
+// Equivalent to m.call(10)
+i32 result{m(10)}
+return result
+// Expected Result: 50
+```
+
+**2. `test_52.txt`: Callable and Member Function Equivalence**
+This test demonstrates that both the explicit member function call (`v.call()`) and the callable object syntax (`v()`) work identically for the same `call` function.
+
+```
+struct Value
+{
+    i32 val
+
+    fn check = () -> i32
+    {
+        return val + 1
+    }
+
+    fn call = () -> i32
+    {
+        return val + 1
+    }
+}
+
+Value v{9}
+i32 a{v.call()} // Explicit call
+i32 b{v()}      // Callable object syntax
+i32 result{a + b}
+return result
+// Expected Result: (9 + 1) + (9 + 1) = 20
+```
+
+**3. `test_53.txt`: Callable Object Modifying State (Mutable)**
+This test uses a mutable object (`Counter mut c`) with a `call` function that modifies its internal state (`value`). Subsequent calls reflect the new state.
+
+```
+struct Counter
+{
+    i32 mut value
+
+    fn call = (i32 x) -> i32
+    {
+        value = value + x
+        return value
+    }
+}
+
+Counter mut c{10}
+i32 a{c(5)} // value becomes 15, returns 15
+i32 b{c(2)} // value becomes 17, returns 17
+i32 result{a + b}
+return result
+// Expected Result: 15 + 17 = 32
+```
+
+-----
+
+### Failing Path Tests
+
+**1. `test_fail_51.txt`: Missing `call` Function**
+This test attempts to use the callable object syntax on a struct that does not define a `fn call` member function.
+
+```
+struct Point
+{
+    i32 x
+    i32 y
+}
+
+Point p{10, 20}
+i32 result{p(5)}
+return result
+// Expected Failure: Semantic error (e.g., "Struct 'Point' has no member function 'call'")
+```
+
+**2. `test_fail_52.txt`: Incorrect Argument Count**
+This test calls the callable object with fewer arguments than expected by the `call` function's signature.
+
+```
+struct Adder
+{
+    i32 base
+
+    fn call = (i32 a, i32 b) -> i32
+    {
+        return base + a + b
+    }
+}
+
+Adder a{10}
+i32 result{a(5)} // Missing the second argument
+return result
+// Expected Failure: Semantic error (e.g., "Function 'call' expects 2 arguments but got 1")
+```
+
+**3. `test_fail_53.txt`: Incorrect Argument Type**
+This test calls the callable object with an argument of the wrong data type (i32 instead of bool).
+
+```
+struct Checker
+{
+    i32 x
+
+    fn call = (bool flag) -> i32
+    {
+        if flag
+        {
+            return x
+        }
+        return 0
+    }
+}
+
+Checker c{10}
+i32 result{c(5)} // Passing i32, expected bool
+return result
+// Expected Failure: Semantic error (e.g., "Argument 1 to function 'call' has type i32 but expected bool")
+```
