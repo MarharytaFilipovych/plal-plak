@@ -362,7 +362,7 @@ class SyntaxParser:
     def __parse_token_variable(self, token: Token) -> FactorNode:
         self.__eat()
         if self.__is_field_access():
-            self.__parse_field_access(token)
+            return self.__parse_field_access(token)
         if self.__is_function_call():
             if token.value in self.declared_structs:
                 synthetic_chain = FieldChain([token.value])
