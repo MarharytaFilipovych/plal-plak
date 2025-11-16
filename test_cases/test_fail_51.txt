@@ -1,0 +1,10 @@
+struct Point
+{
+    i32 x
+    i32 y
+}
+
+Point p{10, 20}
+i32 result{p(5)}
+return result
+// Expected Failure: Semantic error (e.g., "Struct 'Point' has no member function 'call'")

@@ -1,0 +1,14 @@
+struct Adder
+{
+    i32 base
+
+    fn call = (i32 a, i32 b) -> i32
+    {
+        return base + a + b
+    }
+}
+
+Adder a{10}
+i32 result{a(5)} // Missing the second argument
+return result
+// Expected Failure: Semantic error (e.g., "Function 'call' expects 2 arguments but got 1")

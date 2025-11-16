@@ -97,13 +97,12 @@ class FunctionGenerator:
         field_ptr, field_llvm_type = self.__get_this_field_pointer(field_name)
         self.emitter.emit_line(f"  store {field_llvm_type} {value}, {field_llvm_type}* {field_ptr}")
 
-    def __get_llvm_type(self, data_type) -> str:
+    @staticmethod
+    def __get_llvm_type(data_type) -> str:
         if isinstance(data_type, DataType):
             return data_type.to_llvm()
-        
         if DataType.is_data_type(data_type):
             return DataType.from_string(data_type).to_llvm()
-        
         return f"%struct.{data_type}*"
 
     def __get_this_field_pointer(self, field_name: str) -> tuple[str, str]:

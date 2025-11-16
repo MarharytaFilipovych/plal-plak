@@ -1,0 +1,15 @@
+struct Multiplier
+{
+    i32 factor
+
+    fn call = (i32 x) -> i32
+    {
+        return factor * x
+    }
+}
+
+Multiplier m{5}
+// Equivalent to m.call(10)
+i32 result{m(10)}
+return result
+// Expected Result: 50

@@ -1,0 +1,18 @@
+struct Checker
+{
+    i32 x
+
+    fn call = (bool flag) -> i32
+    {
+        if flag
+        {
+            return x
+        }
+        return 0
+    }
+}
+
+Checker c{10}
+i32 result{c(5)} // Passing i32, expected bool
+return result
+// Expected Failure: Semantic error (e.g., "Argument 1 to function 'call' has type i32 but expected bool")

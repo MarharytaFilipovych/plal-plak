@@ -1,0 +1,21 @@
+struct Value
+{
+    i32 val
+
+    fn check = () -> i32
+    {
+        return val + 1
+    }
+
+    fn call = () -> i32
+    {
+        return val + 1
+    }
+}
+
+Value v{9}
+i32 a{v.call()} // Explicit call
+i32 b{v()}      // Callable object syntax
+i32 result{a + b}
+return result
+// Expected Result: (9 + 1) + (9 + 1) = 20

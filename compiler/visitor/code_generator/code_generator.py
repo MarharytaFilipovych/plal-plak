@@ -13,7 +13,6 @@ from .function_generator import FunctionGenerator
 
 
 class CodeGenerator(ASTVisitor):
-
     def __init__(self):
         self.variable_registry = VariableRegistry()
         self.emitter = LLVMEmitter()
@@ -284,4 +283,4 @@ class CodeGenerator(ASTVisitor):
             temp_reg = self.emitter.get_temp_register()
             self.emitter.emit_line(f"  {temp_reg} = xor i1 {operand}, 1")
             return temp_reg
-        raise ValueError(f"We do not support this unary operator: {node.operator}")
+        raise ValueError(f"We do not support this unary operator: {node.operator}!")

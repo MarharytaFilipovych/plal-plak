@@ -1,0 +1,17 @@
+struct Counter
+{
+    i32 mut value
+
+    fn call = (i32 x) -> i32
+    {
+        value = value + x
+        return value
+    }
+}
+
+Counter mut c{10}
+i32 a{c(5)} // value becomes 15, returns 15
+i32 b{c(2)} // value becomes 17, returns 17
+i32 result{a + b}
+return result
+// Expected Result: 15 + 17 = 32

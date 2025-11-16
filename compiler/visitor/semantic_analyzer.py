@@ -44,7 +44,6 @@ class SemanticAnalyzer(ASTVisitor):
         self.__register_member_functions(node.variable, node.member_functions)
         [self.__analyze_member_function(node.variable, member_func) for member_func in node.member_functions]
 
-
     def __register_member_functions(self, struct_name: str, member_functions):
         member_func_names = set()
         for member_function in member_functions:
